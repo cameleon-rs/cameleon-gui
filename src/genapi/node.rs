@@ -5,7 +5,7 @@ use cameleon::{
 use derive_more::From;
 use iced::{Column, Container, Element, Length};
 
-use super::{boolean, command, enumeration, float, integer};
+use super::{boolean, command, enumeration, float, integer, string};
 use crate::{style::WithBorder, Result};
 
 #[derive(Debug, Clone, From)]
@@ -15,6 +15,7 @@ pub enum Msg {
     Float(float::Msg),
     Integer(integer::Msg),
     Command(command::Msg),
+    String(string::Msg),
 }
 
 pub enum Node {
@@ -23,6 +24,7 @@ pub enum Node {
     Float(float::Node),
     Enumeration(enumeration::Node),
     Command(command::Node),
+    String(string::Node),
     Todo,
 }
 
@@ -41,6 +43,8 @@ impl Node {
             Node::Enumeration(enumeration::Node::new(node, ctxt))
         } else if let Some(node) = node.as_command(ctxt) {
             Node::Command(command::Node::new(node, ctxt))
+        } else if let Some(node) = node.as_string(ctxt) {
+            Node::String(string::Node::new(node, ctxt))
         } else {
             Node::Todo
         }
@@ -56,6 +60,7 @@ impl Node {
             Node::Enumeration(node) => node.view(cx).map(Into::into),
             Node::Boolean(node) => node.view(cx).map(Into::into),
             Node::Command(node) => node.view(cx).map(Into::into),
+            Node::String(node) => node.view(cx).map(Into::into),
             _ => Column::new().into(),
         };
         Container::new(content)
@@ -75,6 +80,7 @@ impl Node {
             (Node::Float(node), Msg::Float(msg)) => node.update(msg, cx),
             (Node::Integer(node), Msg::Integer(msg)) => node.update(msg, cx),
             (Node::Command(node), Msg::Command(msg)) => node.update(msg, cx)?,
+            (Node::String(node), Msg::String(msg)) => node.update(msg, cx)?,
             _ => (),
         }
         Ok(())
