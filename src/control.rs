@@ -1,8 +1,7 @@
+use cameleon::payload::PayloadReceiver;
 use iced::{button, Button, Container, Element, Length, Row, Text};
 
-use crate::features;
-
-use super::{context::Context, frame, style::WithBorder, Result};
+use super::{camera::CameraId, context::Context, style::WithBorder, Result};
 
 #[derive(Debug, Clone)]
 pub enum Msg {
@@ -14,8 +13,10 @@ pub enum Msg {
 
 #[derive(Debug)]
 pub enum OutMsg {
-    Frame(frame::Msg),
-    Features(features::Msg),
+    Opened(CameraId),
+    Closed(CameraId),
+    Started(CameraId, PayloadReceiver),
+    Stopped(CameraId),
 }
 
 #[derive(Debug, Default)]
@@ -67,21 +68,23 @@ impl Control {
                 if let Some(cam) = ctx.selected_mut() {
                     cam.raw.open()?;
                     cam.raw.load_context()?;
-                    Ok(Some(OutMsg::Features(features::Msg::Load(cam.id))))
+                    Ok(Some(OutMsg::Opened(cam.id)))
                 } else {
                     Ok(None)
                 }
             }
             Msg::Close => {
                 if let Some(cam) = ctx.selected_mut() {
-                    cam.raw.close()?
+                    cam.raw.close()?;
+                    Ok(Some(OutMsg::Closed(cam.id)))
+                } else {
+                    Ok(None)
                 }
-                Ok(None)
             }
             Msg::StartStreaming => {
                 if let Some(cam) = ctx.selected_mut() {
                     let receiver = cam.raw.start_streaming(1)?;
-                    Ok(Some(OutMsg::Frame(frame::Msg::Attach(receiver))))
+                    Ok(Some(OutMsg::Started(cam.id, receiver)))
                 } else {
                     Ok(None)
                 }
@@ -89,8 +92,10 @@ impl Control {
             Msg::StopStreaming => {
                 if let Some(cam) = ctx.selected_mut() {
                     cam.raw.stop_streaming()?;
+                    Ok(Some(OutMsg::Stopped(cam.id)))
+                } else {
+                    Ok(None)
                 }
-                Ok(Some(OutMsg::Frame(frame::Msg::Detach)))
             }
         }
     }

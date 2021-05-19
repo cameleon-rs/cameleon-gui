@@ -122,8 +122,11 @@ impl App {
     fn update_control(&mut self, msg: control::Msg) -> Command<Msg> {
         match self.control.update(msg, &mut self.ctx) {
             Ok(Some(out)) => match out {
-                control::OutMsg::Frame(msg) => self.update_frame(msg),
-                control::OutMsg::Features(msg) => self.update_features(msg),
+                control::OutMsg::Opened(id) => self.update_features(features::Msg::Load(id)),
+                control::OutMsg::Started(id, receiver) => {
+                    self.update_frame(frame::Msg::Attach(receiver))
+                }
+                _ => Command::none(),
             },
             Ok(None) => Command::none(),
             Err(err) => {
