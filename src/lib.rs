@@ -1,70 +1,48 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::time::Duration;
-
-use anyhow::Result;
-use cameleon::{
-    self,
-    genapi::{DefaultGenApiCtxt, ParamsCtxt},
-    u3v,
-};
-use iced::{
-    button, executor, time, Application, Clipboard, Column, Command, Container, Element, Row,
-    Subscription,
-};
-use tracing::trace;
+use derive_more::From;
+use iced::{executor, Application, Clipboard, Column, Command, Element, Row, Subscription};
 
 mod camera;
+mod context;
 mod control;
 mod convert;
+mod features;
 mod frame;
 mod genapi;
 mod selector;
 mod style;
 
-use camera::{Camera, CameraId};
-
 #[derive(Default)]
 pub struct App {
-    cameras: HashMap<CameraId, Camera>,
-    selected: Option<CameraId>,
+    ctx: context::Context,
     selector: selector::Selector,
     control: control::Control,
-    genapis: HashMap<CameraId, genapi::GenApi>,
+    features: features::Features,
     frame: frame::Frame,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("Cameleon error: {0}")]
+    CameleonError(#[from] cameleon::CameleonError),
+
+    #[error("stream error: {0}")]
+    StreamError(#[from] cameleon::StreamError),
+
+    #[error("control error: {0}")]
+    ControlError(#[from] cameleon::ControlError),
+
+    #[error("failed conversion")]
+    FailedConversion,
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug, From)]
 pub enum Msg {
-    // Camera control
-    Open,
-    Close,
-    StartStreaming,
-    StopStreaming,
-    // Camera selector
-    Refresh,
-    Selected(CameraId),
-    // GenAPI
-    GenApi(genapi::Msg),
-    // Frame
-    UpdateFrame,
-}
-
-macro_rules! view_genapi {
-    ($selected: expr, $genapis: expr) => {
-        if let Some(selected) = $selected {
-            Row::new()
-        } else {
-            Row::new()
-        }
-    };
-}
-
-macro_rules! check {
-    ($res: expr) => {
-        if let Err(err) = $res {
-            tracing::error!("{}", err)
-        }
-    };
+    Control(control::Msg),
+    Selector(selector::Msg),
+    Features(features::Msg),
+    Frame(frame::Msg),
 }
 
 impl Application for App {
@@ -74,7 +52,7 @@ impl Application for App {
 
     fn new(_flags: Self::Flags) -> (Self, Command<Self::Message>) {
         let mut app = Self::default();
-        check!(app.refresh());
+        app.ctx.refresh();
         (app, Command::none())
     }
 
@@ -83,16 +61,16 @@ impl Application for App {
     }
 
     fn view(&mut self) -> Element<'_, Self::Message> {
-        let control = self.control.view(self.selected_state());
-        let selector = self.selector.view(self.selected);
-        let genapi = view_genapi!(self.selected, self.genapis);
-        let frame = self.frame.view();
+        let control = self.control.view(&self.ctx).map(Into::into);
+        let selector = self.selector.view(&self.ctx).map(Into::into);
+        let features = self.features.view(&mut self.ctx).map(Into::into);
+        let frame = self.frame.view(&self.ctx).map(Into::into);
 
         Column::new()
             .push(control)
             .push(
                 Row::new()
-                    .push(Column::new().max_width(400).push(selector).push(genapi))
+                    .push(Column::new().max_width(400).push(selector).push(features))
                     .push(frame),
             )
             .into()
@@ -105,111 +83,51 @@ impl Application for App {
         _clipboard: &mut Clipboard,
     ) -> Command<Self::Message> {
         match message {
-            Msg::Open => {
-                if let Some(cam) = self.selected_mut() {
-                    check!(cam.raw.open());
-                    check!(cam.raw.load_context());
-                }
-            }
-            Msg::Close => {
-                if let Some(cam) = self.selected_mut() {
-                    check!(cam.raw.close());
-                }
-            }
-            Msg::StartStreaming => {
-                if let Some(selected) = self.selected_mut() {
-                    match selected.raw.start_streaming(1) {
-                        Ok(receiver) => self.frame.attach(receiver),
-                        Err(err) => tracing::error!("{}", err),
-                    }
-                }
-            }
-            Msg::StopStreaming => {
-                if let Some(cam) = self.selected_mut() {
-                    check!(cam.raw.stop_streaming());
-                    self.frame.detach();
-                }
-            }
-            Msg::Refresh => check!(self.refresh()),
-            Msg::Selected(info) => self.selected = Some(info),
-            Msg::GenApi(msg) => {
-                if let Some(camera) = self.selected_mut() {
-                    let params_ctxt = camera.raw.params_ctxt();
-                };
-
-                if let Some(selected) = self.selected {
-                    if let Some(genapi) = self.genapis.get_mut(&selected) {
-                        genapi.update(msg)
-                    }
-                }
-            }
-            Msg::UpdateFrame => {
-                check!(self.frame.update())
-            }
+            Msg::Control(msg) => self.update_control(msg),
+            Msg::Selector(msg) => self.update_selector(msg),
+            Msg::Frame(msg) => self.update_frame(msg),
+            Msg::Features(msg) => self.update_features(msg),
         }
-        Command::none()
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        time::every(Duration::from_millis(100)).map(|_| Msg::UpdateFrame)
+        Subscription::batch(vec![
+            self.frame.subscription().map(Into::into),
+            self.selector.subscription().map(Into::into),
+        ])
     }
 }
 
 impl App {
-    fn refresh(&mut self) -> Result<()> {
-        let raws: Vec<cameleon::Camera<u3v::ControlHandle, u3v::StreamHandle, DefaultGenApiCtxt>> =
-            u3v::enumerate_cameras().unwrap(); // TODO: Add error handling
-        trace!("Detected {} cameras", raws.len());
-        let mut exists: HashSet<CameraId> = self.cameras.iter().map(|(id, _)| *id).collect();
-        for raw in raws {
-            let camera = Camera::new(raw)?;
-            if exists.contains(&camera.id) {
-                exists.remove(&camera.id);
-                continue;
-            }
-            self.selector
-                .options
-                .insert(camera.id, (camera.name.clone(), button::State::new()));
-            self.cameras.insert(camera.id, camera);
-        }
-        for removed in exists {
-            // TODO: close and/or stop streaming
-            self.selector.options.remove(&removed);
-            self.cameras.remove(&removed);
-        }
-
-        // Drop selected if it removed
-        if let Some(selected) = self.selected {
-            if !self.cameras.contains_key(&selected) {
-                self.selected = None
+    fn update_control(&mut self, msg: control::Msg) -> Command<Msg> {
+        match self.control.update(msg, &mut self.ctx) {
+            Ok(Some(out)) => match out {
+                control::OutMsg::Frame(msg) => self.update_frame(msg),
+            },
+            Ok(None) => Command::none(),
+            Err(err) => {
+                tracing::error!("{}", err);
+                Command::none()
             }
         }
-
-        // Randomly selected if it is `None`
-        if self.selected.is_none() && self.cameras.len() > 0 {
-            self.selected = Some(*self.cameras.keys().next().unwrap());
-        }
-
-        Ok(())
     }
 
-    fn selected(&self) -> Option<&Camera> {
-        if let Some(selected) = self.selected {
-            self.cameras.get(&selected)
-        } else {
-            None
-        }
+    fn update_selector(&mut self, msg: selector::Msg) -> Command<Msg> {
+        self.selector.update(msg, &mut self.ctx).map(Into::into)
     }
 
-    fn selected_mut(&mut self) -> Option<&mut Camera> {
-        if let Some(selected) = self.selected {
-            self.cameras.get_mut(&selected)
-        } else {
-            None
+    fn update_frame(&mut self, msg: frame::Msg) -> Command<Msg> {
+        match self.frame.update(msg, &mut self.ctx) {
+            Ok(cmd) => cmd.map(Into::into),
+            Err(err) => {
+                tracing::error!("{}", err);
+                Command::none()
+            }
         }
     }
 
-    fn selected_state(&self) -> Option<camera::State> {
-        self.selected().map(|cam| cam.state())
+    fn update_features(&mut self, msg: features::Msg) -> Command<Msg> {
+        self.features.update(msg, &mut self.ctx);
+        Command::none()
     }
 }

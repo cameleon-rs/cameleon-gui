@@ -1,19 +1,31 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, time::Duration};
 
-use iced::{button, scrollable, Button, Column, Container, Element, Length, Scrollable, Text};
+use iced::{
+    button, scrollable, time, Button, Checkbox, Column, Command, Container, Element, Length, Row,
+    Scrollable, Subscription, Text,
+};
 
 use super::style::WithBorder;
-use super::{camera::CameraId, Msg};
+use super::{camera::CameraId, context::Context};
+
+#[derive(Debug, Clone)]
+pub enum Msg {
+    Selected(CameraId),
+    EnableAutoRefresh(bool),
+    Refresh,
+}
 
 #[derive(Debug, Default)]
 pub struct Selector {
-    pub options: BTreeMap<CameraId, (String, button::State)>,
+    options: BTreeMap<CameraId, (String, button::State)>,
     scrollable: scrollable::State,
     refresh: button::State,
+    auto_refresh: bool,
 }
 
 impl Selector {
-    pub fn view(&mut self, selected: Option<CameraId>) -> Element<Msg> {
+    pub fn view<'a>(&'a mut self, ctx: &Context) -> Element<'a, Msg> {
+        let selected = ctx.selected;
         let options = self.options.iter_mut().fold(
             Scrollable::new(&mut self.scrollable),
             |scrollable, (id, (name, state))| {
@@ -25,10 +37,36 @@ impl Selector {
                 )
             },
         );
+        let auto_refresh = Checkbox::new(self.auto_refresh, "Auto Refresh", Msg::EnableAutoRefresh);
         let refresh = Button::new(&mut self.refresh, Text::new("Refresh")).on_press(Msg::Refresh);
+        let row = Row::new().push(auto_refresh).push(refresh);
 
-        let content = Column::new().push(options).push(refresh);
+        let content = Column::new().push(options).push(row);
         Container::new(content).style(WithBorder).into()
+    }
+
+    pub fn update(&mut self, msg: Msg, ctx: &mut Context) -> Command<Msg> {
+        match msg {
+            Msg::Selected(id) => ctx.selected = Some(id),
+            Msg::Refresh => {
+                ctx.refresh();
+                self.options = ctx
+                    .cameras
+                    .iter()
+                    .map(|(id, cam)| (*id, (cam.name.clone(), button::State::new())))
+                    .collect();
+            }
+            Msg::EnableAutoRefresh(auto_refresh) => self.auto_refresh = auto_refresh,
+        }
+        Command::none()
+    }
+
+    pub fn subscription(&self) -> Subscription<Msg> {
+        if self.auto_refresh {
+            time::every(Duration::from_millis(100)).map(|_| Msg::Refresh)
+        } else {
+            Subscription::none()
+        }
     }
 }
 

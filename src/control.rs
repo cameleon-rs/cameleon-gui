@@ -1,6 +1,20 @@
+use cameleon::payload::PayloadReceiver;
 use iced::{button, Button, Container, Element, Length, Row, Text};
 
-use super::{camera::State, style::WithBorder, Msg};
+use super::{camera::State, context::Context, frame, style::WithBorder, Result};
+
+#[derive(Debug, Clone)]
+pub enum Msg {
+    Open,
+    Close,
+    StartStreaming,
+    StopStreaming,
+}
+
+#[derive(Debug)]
+pub enum OutMsg {
+    Frame(frame::Msg),
+}
 
 #[derive(Debug, Default)]
 pub struct Control {
@@ -14,7 +28,8 @@ impl Control {
         Self::default()
     }
 
-    pub fn view(&mut self, state: Option<State>) -> Element<Msg> {
+    pub fn view<'a>(&'a mut self, ctx: &Context) -> Element<'a, Msg> {
+        let state = ctx.selected_state();
         let toggle = if let Some(state) = state {
             if state.is_open() {
                 Button::new(&mut self.toggle, Text::new("Close")).on_press(Msg::Close)
@@ -42,5 +57,37 @@ impl Control {
             .width(Length::Fill)
             .style(WithBorder)
             .into()
+    }
+
+    pub fn update(&mut self, msg: Msg, ctx: &mut Context) -> Result<Option<OutMsg>> {
+        match msg {
+            Msg::Open => {
+                if let Some(cam) = ctx.selected_mut() {
+                    cam.raw.open()?;
+                    cam.raw.load_context()?;
+                }
+                Ok(None)
+            }
+            Msg::Close => {
+                if let Some(cam) = ctx.selected_mut() {
+                    cam.raw.close()?
+                }
+                Ok(None)
+            }
+            Msg::StartStreaming => {
+                if let Some(cam) = ctx.selected_mut() {
+                    let receiver = cam.raw.start_streaming(1)?;
+                    Ok(Some(OutMsg::Frame(frame::Msg::Attach(receiver))))
+                } else {
+                    Ok(None)
+                }
+            }
+            Msg::StopStreaming => {
+                if let Some(cam) = ctx.selected_mut() {
+                    cam.raw.stop_streaming()?;
+                }
+                Ok(Some(OutMsg::Frame(frame::Msg::Detach)))
+            }
+        }
     }
 }
