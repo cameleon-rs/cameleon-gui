@@ -1,4 +1,5 @@
 use super::node;
+use crate::Result;
 use cameleon::{
     genapi::{node_kind::CategoryNode, GenApiCtxt, ParamsCtxt},
     DeviceControl,
@@ -76,12 +77,17 @@ impl Node {
     }
 
     #[tracing::instrument(skip(self, cx), level = "trace")]
-    pub fn update(&mut self, msg: Msg, cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>) {
+    pub fn update(
+        &mut self,
+        msg: Msg,
+        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+    ) -> Result<()> {
         match msg {
             Msg::Expand => {
                 self.expanded = !self.expanded;
                 trace!(self.expanded);
                 trace!("num of features: {}", self.features.len());
+                Ok(())
             }
             Msg::Node(i, msg) => self.features[i].update(msg, cx),
         }

@@ -5,6 +5,8 @@ use cameleon::{
 use derive_more::From;
 use iced::{scrollable, Element, Scrollable};
 
+use crate::Result;
+
 mod boolean;
 mod category;
 mod command;
@@ -56,7 +58,7 @@ impl GenApi {
         &mut self,
         msg: Msg,
         ctx: &mut ParamsCtxt<T, U>,
-    ) {
+    ) -> Result<()> {
         match msg {
             Msg::Category(i, msg) => self.categories[i].update(msg, ctx),
         }

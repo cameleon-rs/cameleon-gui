@@ -58,7 +58,7 @@ impl Features {
             Msg::GenApi(id, msg) => {
                 if let Some(genapi) = self.genapis.get_mut(&id) {
                     if let Some(cam) = ctx.cameras.get_mut(&id) {
-                        genapi.update(msg, &mut cam.raw.params_ctxt()?)
+                        genapi.update(msg, &mut cam.raw.params_ctxt()?)?;
                     }
                 }
             }

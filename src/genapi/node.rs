@@ -6,7 +6,7 @@ use derive_more::From;
 use iced::{Column, Container, Element, Length};
 
 use super::{boolean, command, enumeration, float, integer};
-use crate::style::WithBorder;
+use crate::{style::WithBorder, Result};
 
 #[derive(Debug, Clone, From)]
 pub enum Msg {
@@ -14,6 +14,7 @@ pub enum Msg {
     Bool(boolean::Msg),
     Float(float::Msg),
     Integer(integer::Msg),
+    Command(command::Msg),
 }
 
 pub enum Node {
@@ -39,7 +40,7 @@ impl Node {
         } else if let Some(node) = node.as_enumeration(ctxt) {
             Node::Enumeration(enumeration::Node::new(node, ctxt))
         } else if let Some(node) = node.as_command(ctxt) {
-            Node::Todo
+            Node::Command(command::Node::new(node, ctxt))
         } else {
             Node::Todo
         }
@@ -54,6 +55,7 @@ impl Node {
             Node::Float(node) => node.view(cx).map(Into::into),
             Node::Enumeration(node) => node.view(cx).map(Into::into),
             Node::Boolean(node) => node.view(cx).map(Into::into),
+            Node::Command(node) => node.view(cx).map(Into::into),
             _ => Column::new().into(),
         };
         Container::new(content)
@@ -62,13 +64,19 @@ impl Node {
             .into()
     }
 
-    pub fn update(&mut self, msg: Msg, cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>) {
+    pub fn update(
+        &mut self,
+        msg: Msg,
+        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+    ) -> Result<()> {
         match (self, msg) {
             (Node::Enumeration(node), Msg::Enumeration(msg)) => node.update(msg, cx),
             (Node::Boolean(node), Msg::Bool(msg)) => node.update(msg, cx),
             (Node::Float(node), Msg::Float(msg)) => node.update(msg, cx),
             (Node::Integer(node), Msg::Integer(msg)) => node.update(msg, cx),
+            (Node::Command(node), Msg::Command(msg)) => node.update(msg, cx)?,
             _ => (),
         }
+        Ok(())
     }
 }
