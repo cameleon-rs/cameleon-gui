@@ -1,5 +1,8 @@
 use derive_more::From;
-use iced::{executor, Application, Clipboard, Column, Command, Element, Row, Subscription};
+use iced::{
+    executor, Application, Clipboard, Color, Column, Command, Container, Element, Row, Subscription,
+};
+use tracing::trace;
 
 mod camera;
 mod context;
@@ -18,6 +21,7 @@ pub struct App {
     control: control::Control,
     features: features::Features,
     frame: frame::Frame,
+    debug: bool,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -45,14 +49,22 @@ pub enum Msg {
     Frame(frame::Msg),
 }
 
+#[derive(Debug, Default)]
+pub struct Flags {
+    pub debug: bool,
+}
+
 impl Application for App {
     type Message = Msg;
     type Executor = executor::Default;
-    type Flags = ();
+    type Flags = Flags;
 
-    fn new(_flags: Self::Flags) -> (Self, Command<Self::Message>) {
-        let mut app = Self::default();
-        app.ctx.refresh();
+    fn new(flags: Self::Flags) -> (Self, Command<Self::Message>) {
+        let mut app = Self {
+            debug: flags.debug,
+            ..Default::default()
+        };
+        app.update_selector(selector::Msg::Refresh);
         (app, Command::none())
     }
 
@@ -66,14 +78,19 @@ impl Application for App {
         let features = self.features.view(&mut self.ctx).map(Into::into);
         let frame = self.frame.view(&self.ctx).map(Into::into);
 
-        Column::new()
+        let content: Element<_> = Column::new()
             .push(control)
             .push(
                 Row::new()
                     .push(Column::new().max_width(400).push(selector).push(features))
                     .push(frame),
             )
-            .into()
+            .into();
+        if self.debug {
+            Container::new(content.explain(Color::from_rgb8(200, 30, 30))).into()
+        } else {
+            Container::new(content).into()
+        }
     }
 
     #[tracing::instrument(skip(self, _clipboard), level = "trace")]
@@ -103,6 +120,7 @@ impl App {
         match self.control.update(msg, &mut self.ctx) {
             Ok(Some(out)) => match out {
                 control::OutMsg::Frame(msg) => self.update_frame(msg),
+                control::OutMsg::Features(msg) => self.update_features(msg),
             },
             Ok(None) => Command::none(),
             Err(err) => {
@@ -127,7 +145,13 @@ impl App {
     }
 
     fn update_features(&mut self, msg: features::Msg) -> Command<Msg> {
-        self.features.update(msg, &mut self.ctx);
+        trace!("Update features");
+        match self.features.update(msg, &mut self.ctx) {
+            Ok(()) => (),
+            Err(err) => {
+                tracing::error!("{}", err);
+            }
+        }
         Command::none()
     }
 }

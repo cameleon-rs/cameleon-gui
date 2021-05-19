@@ -10,6 +10,7 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub enum Msg {
     GenApi(CameraId, genapi::Msg),
+    Load(CameraId),
 }
 
 #[derive(Default)]
@@ -29,11 +30,15 @@ impl Features {
 
         if let Some(selected) = ctx.selected {
             if let Some(cam) = ctx.cameras.get_mut(&selected) {
-                if let Some(genapi) = self.genapis.get_mut(&selected) {
-                    if let Ok(params_ctx) = &mut cam.raw.params_ctxt() {
-                        genapi
-                            .view(params_ctx)
-                            .map(move |msg| Msg::GenApi(selected, msg))
+                if cam.state().is_open() {
+                    if let Some(genapi) = self.genapis.get_mut(&selected) {
+                        if let Ok(params_ctx) = &mut cam.raw.params_ctxt() {
+                            genapi
+                                .view(params_ctx)
+                                .map(move |msg| Msg::GenApi(selected, msg))
+                        } else {
+                            space!()
+                        }
                     } else {
                         space!()
                     }
@@ -48,15 +53,24 @@ impl Features {
         }
     }
 
-    pub fn update(&mut self, msg: Msg, ctx: &mut Context) {
+    pub fn update(&mut self, msg: Msg, ctx: &mut Context) -> Result<()> {
         match msg {
             Msg::GenApi(id, msg) => {
                 if let Some(genapi) = self.genapis.get_mut(&id) {
                     if let Some(cam) = ctx.cameras.get_mut(&id) {
-                        genapi.update(msg, &mut cam.raw.params_ctxt().unwrap())
+                        genapi.update(msg, &mut cam.raw.params_ctxt()?)
+                    }
+                }
+            }
+            Msg::Load(id) => {
+                if !self.genapis.contains_key(&id) {
+                    if let Some(cam) = ctx.cameras.get_mut(&id) {
+                        let genapi = GenApi::new(&mut cam.raw.params_ctxt()?);
+                        self.genapis.insert(id, genapi);
                     }
                 }
             }
         }
+        Ok(())
     }
 }

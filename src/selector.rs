@@ -1,8 +1,8 @@
 use std::{collections::BTreeMap, time::Duration};
 
 use iced::{
-    button, scrollable, time, Button, Checkbox, Column, Command, Container, Element, Length, Row,
-    Scrollable, Subscription, Text,
+    button, scrollable, time, widget, Align, Button, Checkbox, Column, Command, Container, Element,
+    Length, Row, Scrollable, Space, Subscription, Text,
 };
 
 use super::style::WithBorder;
@@ -27,7 +27,7 @@ impl Selector {
     pub fn view<'a>(&'a mut self, ctx: &Context) -> Element<'a, Msg> {
         let selected = ctx.selected;
         let options = self.options.iter_mut().fold(
-            Scrollable::new(&mut self.scrollable),
+            Scrollable::new(&mut self.scrollable).height(Length::Units(300)),
             |scrollable, (id, (name, state))| {
                 scrollable.push(
                     Button::new(state, Text::new(name.clone()))
@@ -39,9 +39,15 @@ impl Selector {
         );
         let auto_refresh = Checkbox::new(self.auto_refresh, "Auto Refresh", Msg::EnableAutoRefresh);
         let refresh = Button::new(&mut self.refresh, Text::new("Refresh")).on_press(Msg::Refresh);
-        let row = Row::new().push(auto_refresh).push(refresh);
+        let buttons = Container::new(
+            Row::new()
+                .push(auto_refresh)
+                .push(Space::new(Length::Fill, Length::Shrink))
+                .push(refresh),
+        )
+        .style(WithBorder);
 
-        let content = Column::new().push(options).push(row);
+        let content = Column::new().push(options).push(buttons);
         Container::new(content).style(WithBorder).into()
     }
 

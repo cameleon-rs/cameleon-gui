@@ -1,7 +1,8 @@
-use cameleon::payload::PayloadReceiver;
 use iced::{button, Button, Container, Element, Length, Row, Text};
 
-use super::{camera::State, context::Context, frame, style::WithBorder, Result};
+use crate::features;
+
+use super::{context::Context, frame, style::WithBorder, Result};
 
 #[derive(Debug, Clone)]
 pub enum Msg {
@@ -14,6 +15,7 @@ pub enum Msg {
 #[derive(Debug)]
 pub enum OutMsg {
     Frame(frame::Msg),
+    Features(features::Msg),
 }
 
 #[derive(Debug, Default)]
@@ -65,8 +67,10 @@ impl Control {
                 if let Some(cam) = ctx.selected_mut() {
                     cam.raw.open()?;
                     cam.raw.load_context()?;
+                    Ok(Some(OutMsg::Features(features::Msg::Load(cam.id))))
+                } else {
+                    Ok(None)
                 }
-                Ok(None)
             }
             Msg::Close => {
                 if let Some(cam) = ctx.selected_mut() {

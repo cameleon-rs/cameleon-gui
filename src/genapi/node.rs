@@ -2,7 +2,6 @@ use cameleon::{
     genapi::{GenApiCtxt, ParamsCtxt},
     DeviceControl,
 };
-use cameleon_device::u3v::Device;
 use derive_more::From;
 use iced::{Column, Container, Element, Length};
 

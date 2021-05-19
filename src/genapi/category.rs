@@ -4,6 +4,7 @@ use cameleon::{
     DeviceControl,
 };
 use iced::{button, Button, Column, Element, Length, Row, Space, Text};
+use tracing::trace;
 
 pub struct Node {
     inner: CategoryNode,
@@ -27,14 +28,17 @@ impl Node {
         cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Self {
         let name = inner.as_node().name(cx).to_string();
+        let nodes = inner.nodes(cx);
+        let nodes: Vec<_> = nodes
+            .into_iter()
+            .filter(|node| !node.name(cx).starts_with("Chunk"))
+            .collect();
         Self {
             inner,
             name,
             expanded: false,
-            features: inner
-                .nodes(cx)
+            features: nodes
                 .into_iter()
-                .filter(|node| node.name(cx).starts_with("Chunk")) // Ignore Chunk related nodes
                 .map(|node| node::Node::new(node, cx))
                 .collect(),
             expand: button::State::new(),
@@ -61,7 +65,7 @@ impl Node {
                     });
             column = column.push(
                 Row::new()
-                    .push(Space::new(Length::Units(20), Length::Shrink))
+                    .push(Space::new(Length::Units(10), Length::Shrink))
                     .push(features),
             );
         }
@@ -71,9 +75,14 @@ impl Node {
             .into()
     }
 
+    #[tracing::instrument(skip(self, cx), level = "trace")]
     pub fn update(&mut self, msg: Msg, cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>) {
         match msg {
-            Msg::Expand => self.expanded = !self.expanded,
+            Msg::Expand => {
+                self.expanded = !self.expanded;
+                trace!(self.expanded);
+                trace!("num of features: {}", self.features.len());
+            }
             Msg::Node(i, msg) => self.features[i].update(msg, cx),
         }
     }

@@ -1,10 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use super::camera::{Camera, CameraId, State};
-use cameleon::{
-    genapi::{GenApiCtxt, ParamsCtxt},
-    u3v, DeviceControl,
-};
+use cameleon::u3v;
 use tracing::trace;
 
 #[derive(Default)]
