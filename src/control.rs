@@ -27,11 +27,7 @@ pub struct Control {
 }
 
 impl Control {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn view<'a>(&'a mut self, ctx: &Context) -> Element<'a, Msg> {
+    pub fn view(&mut self, ctx: &Context) -> Element<Msg> {
         let state = ctx.selected_state();
         let toggle = if let Some(state) = state {
             if state.is_open() {

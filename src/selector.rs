@@ -1,8 +1,8 @@
 use std::{collections::BTreeMap, time::Duration};
 
 use iced::{
-    button, scrollable, time, widget, Align, Button, Checkbox, Column, Command, Container, Element,
-    Length, Row, Scrollable, Space, Subscription, Text,
+    button, scrollable, time, Button, Checkbox, Column, Command, Container, Element, Length, Row,
+    Scrollable, Space, Subscription, Text,
 };
 
 use super::style::WithBorder;
@@ -24,7 +24,7 @@ pub struct Selector {
 }
 
 impl Selector {
-    pub fn view<'a>(&'a mut self, ctx: &Context) -> Element<'a, Msg> {
+    pub fn view(&mut self, ctx: &Context) -> Element<Msg> {
         let selected = ctx.selected;
         let options = self.options.iter_mut().fold(
             Scrollable::new(&mut self.scrollable).height(Length::Units(300)),

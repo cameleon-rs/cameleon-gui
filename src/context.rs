@@ -11,12 +11,6 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new() -> Self {
-        let mut ctx = Self::default();
-        ctx.refresh();
-        ctx
-    }
-
     pub fn refresh(&mut self) {
         let raws = u3v::enumerate_cameras().unwrap(); // TODO: Add error handling
         trace!("Detected {} cameras", raws.len());

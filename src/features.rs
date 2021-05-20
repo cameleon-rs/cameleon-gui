@@ -4,7 +4,7 @@ use super::{
     genapi::{self, GenApi},
     Result,
 };
-use iced::{Element, Length, Space, Text};
+use iced::{Element, Length, Space};
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -26,8 +26,6 @@ macro_rules! space {
 
 impl Features {
     pub fn view(&mut self, ctx: &mut Context) -> Element<Msg> {
-        let title = Text::new("Features");
-
         if let Some(selected) = ctx.selected {
             if let Some(cam) = ctx.cameras.get_mut(&selected) {
                 if cam.state().is_open() {

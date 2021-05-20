@@ -8,7 +8,7 @@ use iced::{button, Button, Column, Element, Length, Row, Space, Text};
 use tracing::trace;
 
 pub struct Node {
-    inner: CategoryNode,
+    _inner: CategoryNode,
     name: String,
     expanded: bool,
     expand: button::State,
@@ -35,7 +35,7 @@ impl Node {
             .filter(|node| !node.name(cx).starts_with("Chunk"))
             .collect();
         Self {
-            inner,
+            _inner: inner,
             name,
             expanded: false,
             features: nodes

@@ -25,7 +25,7 @@ impl Entry {
         let base = node.node_base();
         let name = base
             .display_name()
-            .unwrap_or(cx.ctxt.node_store().name_by_id(base.id()).unwrap())
+            .unwrap_or_else(|| cx.ctxt.node_store().name_by_id(base.id()).unwrap())
             .to_string();
         let value = node.value();
         Self { name, value }

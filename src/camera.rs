@@ -53,17 +53,11 @@ pub enum State {
 
 impl State {
     pub fn is_open(&self) -> bool {
-        match self {
-            State::Closed => false,
-            _ => true,
-        }
+        !matches!(self, State::Closed)
     }
 
     pub fn is_streaming(&self) -> bool {
-        match self {
-            State::Streaming => true,
-            _ => false,
-        }
+        matches!(self, State::Streaming)
     }
 }
 
@@ -73,7 +67,7 @@ fn name(
     let info = raw.ctrl.device_info();
     let name = match info.user_defined_name {
         Some(ref name) => {
-            if name != "" {
+            if !name.is_empty() {
                 name
             } else {
                 &info.model_name

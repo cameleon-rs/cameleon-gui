@@ -52,7 +52,7 @@ impl Node {
         match msg {
             Msg::Execute => {
                 if !self.inner.is_writable(ctx)? {
-                    return Ok(());
+                    Ok(())
                 } else {
                     Ok(self.inner.execute(ctx)?)
                 }

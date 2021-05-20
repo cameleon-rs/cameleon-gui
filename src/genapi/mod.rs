@@ -41,10 +41,10 @@ impl GenApi {
         }
     }
 
-    pub fn view<'a, T: DeviceControl, U: GenApiCtxt>(
-        &'a mut self,
+    pub fn view<T: DeviceControl, U: GenApiCtxt>(
+        &mut self,
         ctx: &mut ParamsCtxt<T, U>,
-    ) -> Element<'a, Msg> {
+    ) -> Element<Msg> {
         self.categories
             .iter_mut()
             .enumerate()

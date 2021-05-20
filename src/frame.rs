@@ -3,7 +3,6 @@ use iced::{
     image::{viewer, Handle, Image, Viewer},
     time, Command, Container, Element, Subscription,
 };
-use std::future::Future;
 use std::time::Duration;
 
 use super::{context::Context, convert::convert, Result};
@@ -23,14 +22,8 @@ pub struct Frame {
     viewer: viewer::State,
 }
 
-async fn foo(
-    a: impl Future<Output = std::result::Result<Payload, cameleon::StreamError>>,
-) -> Payload {
-    a.await.unwrap()
-}
-
 impl Frame {
-    pub fn view<'a>(&'a mut self, _ctx: &Context) -> Element<'a, Msg> {
+    pub fn view(&mut self, _ctx: &Context) -> Element<Msg> {
         let content: Element<_> = if let Some(ref handle) = self.handle {
             Viewer::new(&mut self.viewer, handle.clone()).into()
         } else {

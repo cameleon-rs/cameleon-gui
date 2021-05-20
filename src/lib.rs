@@ -1,3 +1,5 @@
+#![deny(clippy::all)]
+
 use derive_more::From;
 use iced::{
     executor, Application, Clipboard, Color, Column, Command, Container, Element, Row, Subscription,
@@ -123,7 +125,7 @@ impl App {
         match self.control.update(msg, &mut self.ctx) {
             Ok(Some(out)) => match out {
                 control::OutMsg::Opened(id) => self.update_features(features::Msg::Load(id)),
-                control::OutMsg::Started(id, receiver) => {
+                control::OutMsg::Started(_id, receiver) => {
                     self.update_frame(frame::Msg::Attach(receiver))
                 }
                 _ => Command::none(),
