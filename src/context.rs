@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use super::camera::{Camera, CameraId, State};
-use cameleon::u3v;
+use super::camera::{enumerate_raw_cameras, Camera, CameraId, State};
 use tracing::trace;
 
 #[derive(Default)]
@@ -12,7 +11,7 @@ pub struct Context {
 
 impl Context {
     pub fn refresh(&mut self) {
-        let raws = u3v::enumerate_cameras().unwrap(); // TODO: Add error handling
+        let raws = enumerate_raw_cameras().unwrap(); // TODO: Add error handling
         trace!("Detected {} cameras", raws.len());
         let mut exists: HashSet<CameraId> = self.cameras.iter().map(|(id, _)| *id).collect();
         for raw in raws {
