@@ -18,7 +18,7 @@ pub struct Node {
 #[derive(Debug, Clone)]
 pub enum Msg {
     Expand,
-    Node(usize, node::Msg),
+    Node(usize, Box<node::Msg>),
 }
 
 const SPACE_OFFSET: u16 = 0;
@@ -40,7 +40,7 @@ impl Node {
             expanded: false,
             features: nodes
                 .into_iter()
-                .map(|node| node::Node::new(node, cx))
+                .filter_map(|node| node::Node::new(node, cx))
                 .collect(),
             expand: button::State::new(),
         }
@@ -62,7 +62,7 @@ impl Node {
                     .iter_mut()
                     .enumerate()
                     .fold(Column::new(), |column, (i, feature)| {
-                        column.push(feature.view(cx).map(move |msg| Msg::Node(i, msg)))
+                        column.push(feature.view(cx).map(move |msg| Msg::Node(i, Box::new(msg))))
                     });
             column = column.push(
                 Row::new()
@@ -89,7 +89,7 @@ impl Node {
                 trace!("num of features: {}", self.features.len());
                 Ok(())
             }
-            Msg::Node(i, msg) => self.features[i].update(msg, cx),
+            Msg::Node(i, msg) => self.features[i].update(*msg, cx),
         }
     }
 }

@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use super::camera::{enumerate_raw_cameras, Camera, CameraId, State};
+use super::camera::{enumerate_cameras, Camera, CameraId};
 use tracing::trace;
 
 #[derive(Default)]
@@ -11,16 +11,16 @@ pub struct Context {
 
 impl Context {
     pub fn refresh(&mut self) {
-        let raws = enumerate_raw_cameras().unwrap(); // TODO: Add error handling
-        trace!("Detected {} cameras", raws.len());
-        let mut exists: HashSet<CameraId> = self.cameras.iter().map(|(id, _)| *id).collect();
-        for raw in raws {
-            let camera = Camera::new(raw).unwrap();
-            if exists.contains(&camera.id) {
-                exists.remove(&camera.id);
+        let dets = enumerate_cameras().unwrap(); // TODO: Add error handling
+        trace!("Detected {} cameras", dets.len());
+        let mut exists: HashSet<CameraId> = self.cameras.keys().copied().collect();
+        for det in dets {
+            let det_id = CameraId::new(det.info());
+            if exists.contains(&det_id) {
+                exists.remove(&det_id);
                 continue;
             }
-            self.cameras.insert(camera.id, camera);
+            self.cameras.insert(det_id, det);
         }
         for removed in exists {
             // TODO: close and/or stop streaming
@@ -40,17 +40,15 @@ impl Context {
         }
     }
 
-    pub fn selected(&self) -> Option<&Camera> {
-        self.selected.map(|id| self.cameras.get(&id)).flatten()
-    }
-
-    pub fn selected_mut(&mut self) -> Option<&mut Camera> {
+    pub fn selected(&self) -> Option<(&Camera, CameraId)> {
         self.selected
-            .map(move |id| self.cameras.get_mut(&id))
+            .map(|id| self.cameras.get(&id).map(|cam| (cam, id)))
             .flatten()
     }
 
-    pub fn selected_state(&self) -> Option<State> {
-        self.selected().map(|cam| cam.state())
+    pub fn selected_mut(&mut self) -> Option<(&mut Camera, CameraId)> {
+        self.selected
+            .map(move |id| self.cameras.get_mut(&id).map(|cam| (cam, id)))
+            .flatten()
     }
 }

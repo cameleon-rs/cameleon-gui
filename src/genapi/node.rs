@@ -3,9 +3,10 @@ use cameleon::{
     DeviceControl,
 };
 use derive_more::From;
-use iced::{Column, Container, Element, Length};
+use iced::{Container, Element, Length};
+use tracing::trace;
 
-use super::{boolean, command, enumeration, float, integer, string};
+use super::{boolean, category, command, enumeration, float, integer, string};
 use crate::{style::WithBorder, Result};
 
 #[derive(Debug, Clone, From)]
@@ -16,6 +17,7 @@ pub enum Msg {
     Integer(integer::Msg),
     Command(command::Msg),
     String(string::Msg),
+    Category(category::Msg),
 }
 
 pub enum Node {
@@ -25,28 +27,31 @@ pub enum Node {
     Enumeration(enumeration::Node),
     Command(command::Node),
     String(string::Node),
-    Todo,
+    Category(category::Node),
 }
 
 impl Node {
     pub fn new<T: DeviceControl, U: GenApiCtxt>(
         node: cameleon::genapi::node_kind::Node,
         ctxt: &mut ParamsCtxt<T, U>,
-    ) -> Self {
+    ) -> Option<Self> {
         if let Some(node) = node.as_boolean(ctxt) {
-            Node::Boolean(boolean::Node::new(node, ctxt))
+            Some(Node::Boolean(boolean::Node::new(node, ctxt)))
         } else if let Some(node) = node.as_integer(ctxt) {
-            Node::Integer(integer::Node::new(node, ctxt))
+            Some(Node::Integer(integer::Node::new(node, ctxt)))
         } else if let Some(node) = node.as_float(ctxt) {
-            Node::Float(float::Node::new(node, ctxt))
+            Some(Node::Float(float::Node::new(node, ctxt)))
         } else if let Some(node) = node.as_enumeration(ctxt) {
-            Node::Enumeration(enumeration::Node::new(node, ctxt))
+            Some(Node::Enumeration(enumeration::Node::new(node, ctxt)))
         } else if let Some(node) = node.as_command(ctxt) {
-            Node::Command(command::Node::new(node, ctxt))
+            Some(Node::Command(command::Node::new(node, ctxt)))
         } else if let Some(node) = node.as_string(ctxt) {
-            Node::String(string::Node::new(node, ctxt))
+            Some(Node::String(string::Node::new(node, ctxt)))
+        } else if let Some(node) = node.as_category(ctxt) {
+            Some(Node::Category(category::Node::new(node, ctxt)))
         } else {
-            Node::Todo
+            trace!("Ignore {} node", node.name(ctxt));
+            None
         }
     }
 
@@ -61,7 +66,7 @@ impl Node {
             Node::Boolean(node) => node.view(cx).map(Into::into),
             Node::Command(node) => node.view(cx).map(Into::into),
             Node::String(node) => node.view(cx).map(Into::into),
-            _ => Column::new().into(),
+            Node::Category(node) => node.view(cx).map(Into::into),
         };
         Container::new(content)
             .width(Length::Fill)
@@ -81,6 +86,7 @@ impl Node {
             (Node::Integer(node), Msg::Integer(msg)) => node.update(msg, cx),
             (Node::Command(node), Msg::Command(msg)) => node.update(msg, cx)?,
             (Node::String(node), Msg::String(msg)) => node.update(msg, cx)?,
+            (Node::Category(node), Msg::Category(msg)) => node.update(msg, cx)?,
             _ => (),
         }
         Ok(())

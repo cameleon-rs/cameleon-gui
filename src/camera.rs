@@ -1,15 +1,18 @@
 use anyhow::Result;
-use std::fmt;
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+};
 
 use cameleon::{
-    genapi::DefaultGenApiCtxt, payload::PayloadSender, u3v, CameleonResult, ControlResult,
-    DeviceControl, PayloadStream, StreamResult,
+    camera::CameraInfo, genapi::DefaultGenApiCtxt, payload::PayloadSender, u3v, CameleonResult,
+    ControlResult, DeviceControl, PayloadStream, StreamResult,
 };
 use derive_more::From;
 
-pub type RawCamera = cameleon::Camera<ControlHandle, StreamHandle, DefaultGenApiCtxt>;
+pub type Camera = cameleon::Camera<ControlHandle, StreamHandle, DefaultGenApiCtxt>;
 
-pub fn enumerate_raw_cameras() -> CameleonResult<Vec<RawCamera>> {
+pub fn enumerate_cameras() -> CameleonResult<Vec<Camera>> {
     Ok(u3v::enumerate_cameras()?
         .into_iter()
         .map(|cam| cam.convert_into())
@@ -22,25 +25,7 @@ pub enum ControlHandle {
 }
 
 impl ControlHandle {
-    fn serial_number(&self) -> &str {
-        match self {
-            ControlHandle::U3V(handle) => &handle.device_info().serial_number,
-        }
-    }
-
-    fn model_name(&self) -> &str {
-        match self {
-            ControlHandle::U3V(handle) => &handle.device_info().model_name,
-        }
-    }
-
-    fn guid(&self) -> &str {
-        match self {
-            ControlHandle::U3V(handle) => &handle.device_info().guid,
-        }
-    }
-
-    fn user_defined_name(&self) -> Option<&str> {
+    pub fn user_defined_name(&self) -> Option<&str> {
         match self {
             ControlHandle::U3V(handle) => handle.device_info().user_defined_name.as_deref(),
         }
@@ -152,34 +137,8 @@ impl PayloadStream for StreamHandle {
     }
 }
 
-pub struct Camera {
-    pub raw: cameleon::Camera<ControlHandle, StreamHandle, DefaultGenApiCtxt>,
-    pub name: String,
-    pub id: CameraId,
-}
-
-impl Camera {
-    pub fn new(
-        raw: cameleon::Camera<ControlHandle, StreamHandle, DefaultGenApiCtxt>,
-    ) -> Result<Self> {
-        let id = CameraId::new(&raw.ctrl.guid())?;
-        let name = name(&raw);
-        Ok(Self { raw, name, id })
-    }
-
-    pub fn state(&self) -> State {
-        if self.raw.strm.is_loop_running() {
-            State::Streaming
-        } else if self.raw.ctrl.is_opened() {
-            State::Opened
-        } else {
-            State::Closed
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct CameraId(usize);
+pub struct CameraId(u64);
 
 impl fmt::Display for CameraId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -188,38 +147,10 @@ impl fmt::Display for CameraId {
 }
 
 impl CameraId {
-    pub fn new<T: AsRef<str>>(guid: T) -> Result<Self> {
-        Ok(CameraId(usize::from_str_radix(guid.as_ref(), 16)?))
+    pub fn new(info: &CameraInfo) -> Self {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        info.hash(&mut hasher);
+        let hash = hasher.finish();
+        Self(hash)
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum State {
-    Closed,
-    Opened,
-    Streaming,
-}
-
-impl State {
-    pub fn is_open(&self) -> bool {
-        !matches!(self, State::Closed)
-    }
-
-    pub fn is_streaming(&self) -> bool {
-        matches!(self, State::Streaming)
-    }
-}
-
-fn name(raw: &cameleon::Camera<ControlHandle, StreamHandle, DefaultGenApiCtxt>) -> String {
-    let name = match raw.ctrl.user_defined_name() {
-        Some(ref name) => {
-            if !name.is_empty() {
-                name
-            } else {
-                raw.ctrl.model_name()
-            }
-        }
-        None => raw.ctrl.model_name(),
-    };
-    format!("{} ({})", name, raw.ctrl.serial_number())
 }

@@ -6,11 +6,14 @@ use iced::{
 };
 
 use super::style::WithBorder;
-use super::{camera::CameraId, context::Context};
+use super::{
+    camera::{Camera, CameraId},
+    context::Context,
+};
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    Selected(CameraId),
+    Select(CameraId),
     EnableAutoRefresh(bool),
     Refresh,
 }
@@ -33,7 +36,7 @@ impl Selector {
                     Button::new(state, Text::new(name.clone()))
                         .width(Length::Fill)
                         .style(style::Button::new(selected, *id))
-                        .on_press(Msg::Selected(*id)),
+                        .on_press(Msg::Select(*id)),
                 )
             },
         );
@@ -53,13 +56,13 @@ impl Selector {
 
     pub fn update(&mut self, msg: Msg, ctx: &mut Context) -> Command<Msg> {
         match msg {
-            Msg::Selected(id) => ctx.selected = Some(id),
+            Msg::Select(id) => ctx.selected = Some(id),
             Msg::Refresh => {
                 ctx.refresh();
                 self.options = ctx
                     .cameras
                     .iter()
-                    .map(|(id, cam)| (*id, (cam.name.clone(), button::State::new())))
+                    .map(|(id, cam)| (*id, (name(cam), button::State::new())))
                     .collect();
             }
             Msg::EnableAutoRefresh(auto_refresh) => self.auto_refresh = auto_refresh,
@@ -69,11 +72,26 @@ impl Selector {
 
     pub fn subscription(&self) -> Subscription<Msg> {
         if self.auto_refresh {
-            time::every(Duration::from_millis(100)).map(|_| Msg::Refresh)
+            time::every(Duration::from_secs(1)).map(|_| Msg::Refresh)
         } else {
             Subscription::none()
         }
     }
+}
+
+fn name(camera: &Camera) -> String {
+    let info = camera.info();
+    let name = match camera.ctrl.user_defined_name() {
+        Some(name) => {
+            if !name.is_empty() {
+                name
+            } else {
+                &info.model_name
+            }
+        }
+        None => &info.model_name,
+    };
+    format!("{} ({})", name, info.serial_number)
 }
 
 mod style {
