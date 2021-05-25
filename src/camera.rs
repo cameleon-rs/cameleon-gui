@@ -1,12 +1,8 @@
 use anyhow::Result;
-use std::{
-    fmt,
-    hash::{Hash, Hasher},
-};
 
 use cameleon::{
-    camera::CameraInfo, genapi::DefaultGenApiCtxt, payload::PayloadSender, u3v, CameleonResult,
-    ControlResult, DeviceControl, PayloadStream, StreamResult,
+    genapi::DefaultGenApiCtxt, payload::PayloadSender, u3v, CameleonResult, ControlResult,
+    DeviceControl, PayloadStream, StreamResult,
 };
 use derive_more::From;
 
@@ -134,23 +130,5 @@ impl PayloadStream for StreamHandle {
         match self {
             StreamHandle::U3V(handle) => handle.is_loop_running(),
         }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct CameraId(u64);
-
-impl fmt::Display for CameraId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_fmt(format_args!("CameraId: {:#x}", self.0))
-    }
-}
-
-impl CameraId {
-    pub fn new(info: &CameraInfo) -> Self {
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        info.hash(&mut hasher);
-        let hash = hasher.finish();
-        Self(hash)
     }
 }

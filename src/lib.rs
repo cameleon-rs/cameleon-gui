@@ -1,6 +1,6 @@
 #![deny(clippy::all)]
 
-use camera::CameraId;
+use context::CameraId;
 use derive_more::From;
 use iced::{
     executor, Application, Clipboard, Color, Column, Command, Container, Element, Row, Subscription,

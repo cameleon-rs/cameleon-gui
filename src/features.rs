@@ -1,10 +1,9 @@
 use super::{
-    camera::CameraId,
+    context::CameraId,
     context::Context,
     genapi::{self, GenApi},
     Result,
 };
-use cameleon::DeviceControl;
 use iced::{Element, Length, Space};
 use if_chain::if_chain;
 use std::collections::HashMap;
@@ -29,12 +28,13 @@ macro_rules! space {
 impl Features {
     pub fn view(&mut self, ctx: &mut Context) -> Element<Msg> {
         if_chain! {
-            if let Some((cam, id)) = ctx.selected_mut();
-            if cam.ctrl.is_opened();
-            if let Some(genapi) = self.genapis.get_mut(&id);
+            if let Some(selected) = ctx.selected();
+            if selected.is_opened(ctx);
+            if let Some(genapi) = self.genapis.get_mut(&selected);
+            if let Some(cam) = ctx.get_mut(selected);
             if let Ok(params_ctx) = &mut cam.params_ctxt();
             then {
-                genapi.view(params_ctx).map(move |msg| Msg::GenApi(id, msg))
+                genapi.view(params_ctx).map(move |msg| Msg::GenApi(selected, msg))
             } else {
                 space!()
             }
@@ -45,15 +45,16 @@ impl Features {
         match msg {
             Msg::GenApi(id, msg) => {
                 if let Some(genapi) = self.genapis.get_mut(&id) {
-                    let cam = ctx.get_mut(id)?;
+                    let cam = ctx.get_mut(id).unwrap();
                     genapi.update(msg, &mut cam.params_ctxt()?)?;
                 }
             }
             Msg::Load(id) => {
                 if !self.genapis.contains_key(&id) {
-                    let cam = ctx.get_mut(id)?;
-                    let genapi = GenApi::new(&mut cam.params_ctxt()?);
-                    self.genapis.insert(id, genapi);
+                    if let Some(cam) = ctx.get_mut(id) {
+                        let genapi = GenApi::new(&mut cam.params_ctxt()?);
+                        self.genapis.insert(id, genapi);
+                    }
                 }
             }
         }

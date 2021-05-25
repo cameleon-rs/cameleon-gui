@@ -16,9 +16,9 @@ cameleon = {path="../cameleon/cameleon", features=["libusb"]}
 cameleon-genapi = {path="../cameleon/genapi"}
 cameleon-device = {path="../cameleon/device", features=["libusb"]}
 image = "0.23.14"
-thiserror = "1.0.24"
+thiserror = "1.0.25"
 derive_more = "0.99.14"
-libc = {version="0.2.94", optional = true }
+libc = { version = "0.2.94", optional = true }
 if_chain = "1.0.1"
 
 [features]

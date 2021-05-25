@@ -8,8 +8,8 @@ use iced::{
 
 use super::style::WithBorder;
 use super::{
-    camera::{enumerate_cameras, Camera, CameraId},
-    context::Context,
+    camera::{enumerate_cameras, Camera},
+    context::{CameraId, Context},
     Result,
 };
 
@@ -30,14 +30,13 @@ pub struct Selector {
 
 impl Selector {
     pub fn view(&mut self, ctx: &Context) -> Element<Msg> {
-        let selected = ctx.selected().map(|(_, id)| id);
         let options = self.options.iter_mut().fold(
             Scrollable::new(&mut self.scrollable).height(Length::Units(300)),
             |scrollable, (id, (name, state))| {
                 scrollable.push(
                     Button::new(state, Text::new(name.clone()))
                         .width(Length::Fill)
-                        .style(style::Button::new(selected, *id))
+                        .style(style::Button::new(ctx.selected(), *id))
                         .on_press(Msg::Select(*id)),
                 )
             },
@@ -76,14 +75,25 @@ impl Selector {
     fn refresh(&mut self, ctx: &mut Context) -> Result<()> {
         let cameras = enumerate_cameras()?;
         let det_ids: HashSet<_> = cameras.into_iter().map(|cam| ctx.add(cam)).collect();
-        let ids: HashSet<_> = ctx.iter().map(|(id, _)| *id).collect();
+        let ids: HashSet<_> = ctx.cameras().copied().collect();
         for disappered in ids.difference(&det_ids) {
             ctx.remove(*disappered)?;
         }
         self.options = ctx
-            .iter()
-            .map(|(id, cam)| (*id, (name(cam), button::State::new())))
+            .cameras()
+            .map(|id| {
+                ctx.with_camera_or_else(
+                    *id,
+                    || unreachable!(),
+                    |cam| (*id, (name(cam), button::State::new())),
+                )
+            })
             .collect();
+
+        if ctx.selected().is_none() && !self.options.is_empty() {
+            ctx.select(*self.options.keys().next().unwrap()).unwrap();
+        }
+
         Ok(())
     }
 }

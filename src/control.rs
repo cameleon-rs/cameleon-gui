@@ -1,7 +1,7 @@
-use cameleon::{payload::PayloadReceiver, DeviceControl, PayloadStream};
+use cameleon::payload::PayloadReceiver;
 use iced::{button, Button, Container, Element, Length, Row, Text};
 
-use super::{camera::CameraId, context::Context, style::WithBorder, Result};
+use super::{context::CameraId, context::Context, style::WithBorder, Result};
 
 #[derive(Debug, Clone)]
 pub enum Msg {
@@ -28,9 +28,9 @@ pub struct Control {
 
 impl Control {
     pub fn view(&mut self, ctx: &Context) -> Element<Msg> {
-        let cam_with_id = ctx.selected();
-        let toggle = if let Some((cam, _)) = cam_with_id {
-            if cam.ctrl.is_opened() {
+        let selected = ctx.selected();
+        let toggle = if let Some(selected) = selected {
+            if selected.is_opened(ctx) {
                 Button::new(&mut self.toggle, Text::new("Close")).on_press(Msg::Close)
             } else {
                 Button::new(&mut self.toggle, Text::new("Open")).on_press(Msg::Open)
@@ -41,9 +41,9 @@ impl Control {
         let mut start = Button::new(&mut self.start, Text::new("Start"));
         let mut stop = Button::new(&mut self.stop, Text::new("Stop"));
 
-        if let Some((cam, _)) = cam_with_id {
-            if cam.ctrl.is_opened() {
-                if cam.strm.is_loop_running() {
+        if let Some(selected) = selected {
+            if selected.is_opened(ctx) {
+                if selected.is_streaming(ctx) {
                     stop = stop.on_press(Msg::StopStreaming);
                 } else {
                     start = start.on_press(Msg::StartStreaming)
@@ -61,34 +61,33 @@ impl Control {
     pub fn update(&mut self, msg: Msg, ctx: &mut Context) -> Result<Option<OutMsg>> {
         match msg {
             Msg::Open => {
-                if let Some((cam, id)) = ctx.selected_mut() {
-                    cam.open()?;
-                    cam.load_context()?;
-                    Ok(Some(OutMsg::Open(id)))
+                if let Some(cam) = ctx.selected() {
+                    cam.open(ctx)?;
+                    Ok(Some(OutMsg::Open(cam)))
                 } else {
                     Ok(None)
                 }
             }
             Msg::Close => {
-                if let Some((cam, id)) = ctx.selected_mut() {
-                    cam.close()?;
-                    Ok(Some(OutMsg::Close(id)))
+                if let Some(cam) = ctx.selected() {
+                    cam.close(ctx)?;
+                    Ok(Some(OutMsg::Close(cam)))
                 } else {
                     Ok(None)
                 }
             }
             Msg::StartStreaming => {
-                if let Some((cam, id)) = ctx.selected_mut() {
-                    let receiver = cam.start_streaming(1)?;
-                    Ok(Some(OutMsg::StartStreaming(id, receiver)))
+                if let Some(cam) = ctx.selected() {
+                    let recevier = cam.start_streaming(ctx)?;
+                    Ok(Some(OutMsg::StartStreaming(cam, recevier)))
                 } else {
                     Ok(None)
                 }
             }
             Msg::StopStreaming => {
-                if let Some((cam, id)) = ctx.selected_mut() {
-                    cam.stop_streaming()?;
-                    Ok(Some(OutMsg::StopStreaming(id)))
+                if let Some(cam) = ctx.selected() {
+                    cam.stop_streaming(ctx)?;
+                    Ok(Some(OutMsg::StopStreaming(cam)))
                 } else {
                     Ok(None)
                 }
