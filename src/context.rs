@@ -1,43 +1,49 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::iter::Iterator;
 
-use super::camera::{enumerate_cameras, Camera, CameraId};
-use tracing::trace;
+use super::{
+    camera::{Camera, CameraId},
+    Error, Result,
+};
 
 #[derive(Default)]
 pub struct Context {
-    pub cameras: HashMap<CameraId, Camera>,
-    pub selected: Option<CameraId>,
+    cameras: HashMap<CameraId, Camera>,
+    selected: Option<CameraId>,
 }
 
 impl Context {
-    pub fn refresh(&mut self) {
-        let dets = enumerate_cameras().unwrap(); // TODO: Add error handling
-        trace!("Detected {} cameras", dets.len());
-        let mut exists: HashSet<CameraId> = self.cameras.keys().copied().collect();
-        for det in dets {
-            let det_id = CameraId::new(det.info());
-            if exists.contains(&det_id) {
-                exists.remove(&det_id);
-                continue;
-            }
-            self.cameras.insert(det_id, det);
+    pub fn select(&mut self, id: CameraId) -> Result<()> {
+        if self.cameras.contains_key(&id) {
+            self.selected = Some(id);
+            Ok(())
+        } else {
+            Err(Error::NotFound(id))
         }
-        for removed in exists {
-            // TODO: close and/or stop streaming
-            self.cameras.remove(&removed);
-        }
+    }
 
-        // Drop selected if it removed
-        if let Some(selected) = self.selected {
-            if !self.cameras.contains_key(&selected) {
-                self.selected = None
-            }
+    pub fn add(&mut self, camera: Camera) -> CameraId {
+        let id = CameraId::new(camera.info());
+        if !self.cameras.contains_key(&id) {
+            self.cameras.insert(id, camera);
         }
+        id
+    }
 
-        // Randomly selected if it is `None`
-        if self.selected.is_none() && !self.cameras.is_empty() {
-            self.selected = Some(*self.cameras.keys().next().unwrap());
+    pub fn remove(&mut self, id: CameraId) -> Result<()> {
+        if let Some(_) = self.cameras.remove(&id) {
+            Ok(())
+        } else {
+            Err(Error::NotFound(id))
         }
+    }
+
+    pub fn get(&self, id: CameraId) -> Result<&Camera> {
+        self.cameras.get(&id).ok_or_else(|| Error::NotFound(id))
+    }
+
+    pub fn get_mut(&mut self, id: CameraId) -> Result<&mut Camera> {
+        self.cameras.get_mut(&id).ok_or_else(|| Error::NotFound(id))
     }
 
     pub fn selected(&self) -> Option<(&Camera, CameraId)> {
@@ -50,5 +56,13 @@ impl Context {
         self.selected
             .map(move |id| self.cameras.get_mut(&id).map(|cam| (cam, id)))
             .flatten()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&CameraId, &Camera)> {
+        self.cameras.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&CameraId, &mut Camera)> {
+        self.cameras.iter_mut()
     }
 }

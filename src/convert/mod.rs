@@ -1,7 +1,7 @@
 #[cfg(feature = "opencv")]
 mod cv_convert;
 #[cfg(feature = "opencv")]
-use cv_convert::convert;
+pub use cv_convert::convert;
 
 use anyhow::{anyhow, Result};
 use cameleon::payload::{Payload, PayloadType};

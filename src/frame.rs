@@ -45,6 +45,9 @@ impl Frame {
             }
             Msg::Acquired(payload) => {
                 self.handle = Some(convert(&payload).unwrap());
+                if let Some(receiver) = &mut self.receiver {
+                    receiver.send_back(payload)
+                }
                 Ok(Command::none())
             }
             Msg::Attach(receiver) => {

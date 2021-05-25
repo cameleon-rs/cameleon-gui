@@ -67,7 +67,15 @@ impl Node {
     ) -> Element<Msg> {
         let name = Text::new(&self.name).width(Length::FillPortion(1));
         let value: Element<_> = if self.inner.is_readable(cx).unwrap() {
-            let current = Entry::new(&self.inner.current_entry(cx).unwrap(), cx);
+            let current = self.inner.current_entry(cx).unwrap();
+            let value = current.value();
+            let current = self.inner.current_entry(cx).unwrap().node_base().id();
+            let ns = cx.node_store();
+            let name = ns.name_by_id(current).unwrap();
+            let node = current.as_inode_kind(ns).unwrap().node_base_precise();
+            let display_name = node.display_name();
+            let name = display_name.unwrap_or(name).to_string();
+            let current = Entry { name, value };
             if self.inner.is_writable(cx).unwrap() {
                 PickList::new(&mut self.state, &self.entries, Some(current), Msg::Selected)
                     .width(Length::FillPortion(1))

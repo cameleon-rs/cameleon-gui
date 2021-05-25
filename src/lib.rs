@@ -1,5 +1,6 @@
 #![deny(clippy::all)]
 
+use camera::CameraId;
 use derive_more::From;
 use iced::{
     executor, Application, Clipboard, Color, Column, Command, Container, Element, Row, Subscription,
@@ -28,7 +29,7 @@ pub struct App {
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("Cameleon error: {0}")]
+    #[error("cameleon error: {0}")]
     CameleonError(#[from] cameleon::CameleonError),
 
     #[error("stream error: {0}")]
@@ -42,6 +43,9 @@ pub enum Error {
 
     #[error("failed conversion")]
     FailedConversion,
+
+    #[error("not found : {0}")]
+    NotFound(CameraId),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -140,7 +144,13 @@ impl App {
     }
 
     fn update_selector(&mut self, msg: selector::Msg) -> Command<Msg> {
-        self.selector.update(msg, &mut self.ctx).map(Into::into)
+        match self.selector.update(msg, &mut self.ctx) {
+            Ok(cmd) => cmd.map(Into::into),
+            Err(err) => {
+                tracing::error!("{}", err);
+                Command::none()
+            }
+        }
     }
 
     fn update_frame(&mut self, msg: frame::Msg) -> Command<Msg> {

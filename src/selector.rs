@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::{collections::BTreeMap, time::Duration};
 
 use iced::{
@@ -7,8 +8,9 @@ use iced::{
 
 use super::style::WithBorder;
 use super::{
-    camera::{Camera, CameraId},
+    camera::{enumerate_cameras, Camera, CameraId},
     context::Context,
+    Result,
 };
 
 #[derive(Debug, Clone)]
@@ -28,7 +30,7 @@ pub struct Selector {
 
 impl Selector {
     pub fn view(&mut self, ctx: &Context) -> Element<Msg> {
-        let selected = ctx.selected;
+        let selected = ctx.selected().map(|(_, id)| id);
         let options = self.options.iter_mut().fold(
             Scrollable::new(&mut self.scrollable).height(Length::Units(300)),
             |scrollable, (id, (name, state))| {
@@ -54,20 +56,13 @@ impl Selector {
         Container::new(content).style(WithBorder).into()
     }
 
-    pub fn update(&mut self, msg: Msg, ctx: &mut Context) -> Command<Msg> {
+    pub fn update(&mut self, msg: Msg, ctx: &mut Context) -> Result<Command<Msg>> {
         match msg {
-            Msg::Select(id) => ctx.selected = Some(id),
-            Msg::Refresh => {
-                ctx.refresh();
-                self.options = ctx
-                    .cameras
-                    .iter()
-                    .map(|(id, cam)| (*id, (name(cam), button::State::new())))
-                    .collect();
-            }
+            Msg::Select(id) => ctx.select(id)?,
+            Msg::Refresh => self.refresh(ctx)?,
             Msg::EnableAutoRefresh(auto_refresh) => self.auto_refresh = auto_refresh,
         }
-        Command::none()
+        Ok(Command::none())
     }
 
     pub fn subscription(&self) -> Subscription<Msg> {
@@ -76,6 +71,20 @@ impl Selector {
         } else {
             Subscription::none()
         }
+    }
+
+    fn refresh(&mut self, ctx: &mut Context) -> Result<()> {
+        let cameras = enumerate_cameras()?;
+        let det_ids: HashSet<_> = cameras.into_iter().map(|cam| ctx.add(cam)).collect();
+        let ids: HashSet<_> = ctx.iter().map(|(id, _)| *id).collect();
+        for disappered in ids.difference(&det_ids) {
+            ctx.remove(*disappered)?;
+        }
+        self.options = ctx
+            .iter()
+            .map(|(id, cam)| (*id, (name(cam), button::State::new())))
+            .collect();
+        Ok(())
     }
 }
 
