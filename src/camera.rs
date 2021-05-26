@@ -20,6 +20,35 @@ pub enum ControlHandle {
     U3V(u3v::ControlHandle),
 }
 
+#[derive(From)]
+pub enum StreamHandle {
+    U3V(u3v::StreamHandle),
+}
+
+macro_rules! delegate_immu {
+    ($(fn $method:ident(&self $(,$arg:ident: $arg_ty:ty)*) -> $rt_ty: ty;)*) => {
+        $(
+            fn $method(&self $(,$arg: $arg_ty)*) -> $rt_ty {
+                match self {
+                    Self::U3V(handle) => handle.$method($($arg),*)
+                }
+            }
+        )*
+    }
+}
+
+macro_rules! delegate_mut {
+    ($(fn $method:ident(&mut self $(,$arg:ident: $arg_ty:ty)*) -> $rt_ty: ty;)*) => {
+        $(
+            fn $method(&mut self $(,$arg: $arg_ty)*) -> $rt_ty {
+                match self {
+                    Self::U3V(handle) => handle.$method($($arg),*)
+                }
+            }
+        )*
+    }
+}
+
 impl ControlHandle {
     pub fn user_defined_name(&self) -> Option<&str> {
         match self {
@@ -29,106 +58,38 @@ impl ControlHandle {
 }
 
 impl cameleon_genapi::Device for ControlHandle {
-    fn read_mem(&mut self, address: i64, buf: &mut [u8]) -> Result<(), Box<dyn std::error::Error>> {
-        match self {
-            ControlHandle::U3V(handle) => handle.read_mem(address, buf),
-        }
-    }
-
-    fn write_mem(&mut self, address: i64, data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
-        match self {
-            ControlHandle::U3V(handle) => handle.write_mem(address, data),
-        }
+    delegate_mut! {
+        fn read_mem(&mut self, address: i64, buf: &mut [u8]) -> Result<(), Box<dyn std::error::Error>>;
+        fn write_mem(&mut self, address: i64, data: &[u8]) -> Result<(), Box<dyn std::error::Error>>;
     }
 }
 
 impl DeviceControl for ControlHandle {
-    fn open(&mut self) -> ControlResult<()> {
-        match self {
-            ControlHandle::U3V(handle) => handle.open(),
-        }
+    delegate_mut! {
+        fn open(&mut self) -> ControlResult<()>;
+        fn close(&mut self) -> ControlResult<()>;
+        fn read(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()>;
+        fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()>;
+        fn genapi(&mut self) -> ControlResult<String>;
+        fn enable_streaming(&mut self) -> ControlResult<()>;
+        fn disable_streaming(&mut self) -> ControlResult<()>;
     }
 
-    fn is_opened(&self) -> bool {
-        match self {
-            ControlHandle::U3V(handle) => handle.is_opened(),
-        }
+    delegate_immu! {
+        fn is_opened(&self) -> bool;
     }
-
-    fn close(&mut self) -> ControlResult<()> {
-        match self {
-            ControlHandle::U3V(handle) => handle.close(),
-        }
-    }
-
-    fn read(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()> {
-        match self {
-            ControlHandle::U3V(handle) => handle.read(address, buf),
-        }
-    }
-
-    fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()> {
-        match self {
-            ControlHandle::U3V(handle) => handle.write(address, data),
-        }
-    }
-
-    fn genapi(&mut self) -> ControlResult<String> {
-        match self {
-            ControlHandle::U3V(handle) => handle.genapi(),
-        }
-    }
-
-    fn enable_streaming(&mut self) -> ControlResult<()> {
-        match self {
-            ControlHandle::U3V(handle) => handle.enable_streaming(),
-        }
-    }
-
-    fn disable_streaming(&mut self) -> ControlResult<()> {
-        match self {
-            ControlHandle::U3V(handle) => handle.disable_streaming(),
-        }
-    }
-}
-
-#[derive(From)]
-pub enum StreamHandle {
-    U3V(u3v::StreamHandle),
 }
 
 impl PayloadStream for StreamHandle {
-    fn open(&mut self) -> StreamResult<()> {
-        match self {
-            StreamHandle::U3V(handle) => handle.open(),
-        }
+    delegate_mut! {
+        fn open(&mut self) -> StreamResult<()>;
+        fn close(&mut self) -> StreamResult<()>;
+        fn start_streaming_loop(&mut self,sender: PayloadSender,ctrl: &mut dyn DeviceControl) -> StreamResult<()>;
+        fn stop_streaming_loop(&mut self) -> StreamResult<()>;
+
     }
 
-    fn close(&mut self) -> StreamResult<()> {
-        match self {
-            StreamHandle::U3V(handle) => handle.close(),
-        }
-    }
-
-    fn start_streaming_loop(
-        &mut self,
-        sender: PayloadSender,
-        ctrl: &mut dyn DeviceControl,
-    ) -> StreamResult<()> {
-        match self {
-            StreamHandle::U3V(handle) => handle.start_streaming_loop(sender, ctrl),
-        }
-    }
-
-    fn stop_streaming_loop(&mut self) -> StreamResult<()> {
-        match self {
-            StreamHandle::U3V(handle) => handle.stop_streaming_loop(),
-        }
-    }
-
-    fn is_loop_running(&self) -> bool {
-        match self {
-            StreamHandle::U3V(handle) => handle.is_loop_running(),
-        }
+    delegate_immu! {
+        fn is_loop_running(&self) -> bool;
     }
 }
