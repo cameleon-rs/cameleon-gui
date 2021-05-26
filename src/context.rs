@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    fmt,
     hash::{Hash, Hasher},
     iter::Iterator,
 };
@@ -157,11 +156,5 @@ impl CameraId {
         info.hash(&mut hasher);
         let hash = hasher.finish();
         Self(hash)
-    }
-}
-
-impl fmt::Display for CameraId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_fmt(format_args!("CameraId: {:#x}", self.0))
     }
 }

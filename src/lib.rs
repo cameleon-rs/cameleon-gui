@@ -44,7 +44,7 @@ pub enum Error {
     #[error("failed conversion")]
     FailedConversion,
 
-    #[error("not found : {0}")]
+    #[error("not found: {0:?}")]
     NotFound(CameraId),
 }
 
