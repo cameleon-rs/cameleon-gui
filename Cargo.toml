@@ -20,6 +20,8 @@ thiserror = "1.0.25"
 derive_more = "0.99.14"
 libc = { version = "0.2.94", optional = true }
 if_chain = "1.0.1"
+iced_futures = "0.3.0"
+futures = "0.3.15"
 
 [features]
 cv = ["opencv", "libc"]

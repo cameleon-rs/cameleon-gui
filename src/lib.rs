@@ -102,7 +102,6 @@ impl Application for App {
         }
     }
 
-    #[tracing::instrument(skip(self, _clipboard), level = "trace")]
     fn update(
         &mut self,
         message: Self::Message,

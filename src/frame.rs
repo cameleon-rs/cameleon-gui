@@ -1,15 +1,15 @@
 use cameleon::payload::{Payload, PayloadReceiver};
 use iced::{
     image::{viewer, Handle, Image, Viewer},
-    time, Command, Container, Element, Subscription,
+    Command, Container, Element, Subscription,
 };
-use std::time::Duration;
+use iced_futures::BoxStream;
+use std::hash::{Hash, Hasher};
 
 use super::{context::Context, convert::convert, Result};
 
 #[derive(Debug)]
 pub enum Msg {
-    UpdateFrame,
     Acquired(Payload),
     Attach(PayloadReceiver),
     Detach,
@@ -20,6 +20,31 @@ pub struct Frame {
     receiver: Option<PayloadReceiver>,
     handle: Option<Handle>,
     viewer: viewer::State,
+}
+
+struct Receiver {
+    inner: PayloadReceiver,
+}
+
+impl<H: Hasher, E> iced_futures::subscription::Recipe<H, E> for Receiver {
+    type Output = Payload;
+    fn hash(&self, state: &mut H) {
+        struct Marker;
+        std::any::TypeId::of::<Marker>().hash(state);
+    }
+
+    fn stream(self: Box<Self>, _input: BoxStream<E>) -> BoxStream<Self::Output> {
+        let receiver = self.inner.clone();
+        Box::pin(futures::stream::unfold(receiver, move |r| async move {
+            match r.recv().await {
+                Ok(p) => Some((p, r)),
+                Err(e) => {
+                    tracing::trace!("{}", e);
+                    None
+                }
+            }
+        }))
+    }
 }
 
 impl Frame {
@@ -34,16 +59,8 @@ impl Frame {
 
     pub fn update(&mut self, msg: Msg, _ctx: &mut Context) -> Result<Command<Msg>> {
         match msg {
-            Msg::UpdateFrame => {
-                if let Some(receiver) = &self.receiver {
-                    let payload = receiver.try_recv()?;
-                    self.update(Msg::Acquired(payload), _ctx)?;
-                    Ok(Command::none())
-                } else {
-                    Ok(Command::none())
-                }
-            }
             Msg::Acquired(payload) => {
+                tracing::info!("Acquired!!!");
                 self.handle = Some(convert(&payload).unwrap());
                 if let Some(receiver) = &mut self.receiver {
                     receiver.send_back(payload)
@@ -62,6 +79,13 @@ impl Frame {
     }
 
     pub fn subscription(&self) -> Subscription<Msg> {
-        time::every(Duration::from_millis(10)).map(|_| Msg::UpdateFrame)
+        if let Some(receiver) = &self.receiver {
+            Subscription::from_recipe(Receiver {
+                inner: receiver.clone(),
+            })
+            .map(Msg::Acquired)
+        } else {
+            Subscription::none()
+        }
     }
 }
