@@ -62,7 +62,13 @@ impl Node {
                     .iter_mut()
                     .enumerate()
                     .fold(Column::new(), |column, (i, feature)| {
-                        column.push(feature.view(cx).map(move |msg| Msg::Node(i, Box::new(msg))))
+                        match feature.view(cx) {
+                            Ok(elm) => column.push(elm.map(move |msg| Msg::Node(i, Box::new(msg)))),
+                            Err(err) => {
+                                trace!("{}", err);
+                                column
+                            }
+                        }
                     });
             column = column.push(
                 Row::new()

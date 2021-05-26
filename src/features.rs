@@ -2,7 +2,7 @@ use super::{
     context::CameraId,
     context::Context,
     genapi::{self, GenApi},
-    Result,
+    Error, Result,
 };
 use iced::{Element, Length, Space};
 use if_chain::if_chain;
@@ -45,7 +45,7 @@ impl Features {
         match msg {
             Msg::GenApi(id, msg) => {
                 if let Some(genapi) = self.genapis.get_mut(&id) {
-                    let cam = ctx.get_mut(id).unwrap();
+                    let cam = ctx.get_mut(id).ok_or(Error::NotFound(id))?;
                     genapi.update(msg, &mut cam.params_ctxt()?)?;
                 }
             }

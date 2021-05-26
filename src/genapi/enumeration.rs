@@ -1,4 +1,5 @@
 use super::util;
+use crate::Result;
 use cameleon::{
     genapi::{node_kind::EnumerationNode, GenApiCtxt, ParamsCtxt},
     DeviceControl,
@@ -37,7 +38,7 @@ impl fmt::Display for Entry {
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    Selected(Entry),
+    Select(Entry),
     Ignore(Entry),
 }
 
@@ -61,13 +62,13 @@ impl Node {
     pub fn view(
         &mut self,
         cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
-    ) -> Element<Msg> {
+    ) -> Result<Element<Msg>> {
         let name = Text::new(&self.name).width(Length::FillPortion(1));
-        let value: Element<_> = if self.inner.is_readable(cx).unwrap() {
-            let current = self.inner.current_entry(cx).unwrap();
+        let value: Element<_> = if self.inner.is_readable(cx)? {
+            let current = self.inner.current_entry(cx)?;
             let current = Entry::new(current);
-            if self.inner.is_writable(cx).unwrap() {
-                PickList::new(&mut self.state, &self.entries, Some(current), Msg::Selected)
+            if self.inner.is_writable(cx)? {
+                PickList::new(&mut self.state, &self.entries, Some(current), Msg::Select)
                     .width(Length::FillPortion(1))
                     .into()
             } else {
@@ -78,18 +79,20 @@ impl Node {
         } else {
             util::not_available().width(Length::FillPortion(1)).into()
         };
-        Row::new().push(name).push(value).into()
+        Ok(Row::new().push(name).push(value).into())
     }
 
-    pub fn update(&mut self, msg: Msg, cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>) {
-        match msg {
-            Msg::Selected(entry) => {
-                if !self.inner.is_writable(cx).unwrap() {
-                    return;
-                }
-                self.inner.set_entry_by_value(cx, entry.value).unwrap();
+    pub fn update(
+        &mut self,
+        msg: Msg,
+        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+    ) -> Result<()> {
+        if let Msg::Select(entry) = msg {
+            if !self.inner.is_writable(cx)? {
+                return Ok(());
             }
-            Msg::Ignore(_) => (),
+            self.inner.set_entry_by_value(cx, entry.value)?;
         }
+        Ok(())
     }
 }

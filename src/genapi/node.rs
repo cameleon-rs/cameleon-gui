@@ -58,20 +58,20 @@ impl Node {
     pub fn view(
         &mut self,
         cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
-    ) -> Element<Msg> {
+    ) -> Result<Element<Msg>> {
         let content = match self {
-            Node::Integer(node) => node.view(cx).map(Into::into),
-            Node::Float(node) => node.view(cx).map(Into::into),
-            Node::Enumeration(node) => node.view(cx).map(Into::into),
-            Node::Boolean(node) => node.view(cx).map(Into::into),
-            Node::Command(node) => node.view(cx).map(Into::into),
-            Node::String(node) => node.view(cx).map(Into::into),
+            Node::Integer(node) => node.view(cx)?.map(Into::into),
+            Node::Float(node) => node.view(cx)?.map(Into::into),
+            Node::Enumeration(node) => node.view(cx)?.map(Into::into),
+            Node::Boolean(node) => node.view(cx)?.map(Into::into),
+            Node::Command(node) => node.view(cx)?.map(Into::into),
+            Node::String(node) => node.view(cx)?.map(Into::into),
             Node::Category(node) => node.view(cx).map(Into::into),
         };
-        Container::new(content)
+        Ok(Container::new(content)
             .width(Length::Fill)
             .style(WithBorder)
-            .into()
+            .into())
     }
 
     pub fn update(
@@ -80,10 +80,10 @@ impl Node {
         cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Result<()> {
         match (self, msg) {
-            (Node::Enumeration(node), Msg::Enumeration(msg)) => node.update(msg, cx),
-            (Node::Boolean(node), Msg::Bool(msg)) => node.update(msg, cx),
-            (Node::Float(node), Msg::Float(msg)) => node.update(msg, cx),
-            (Node::Integer(node), Msg::Integer(msg)) => node.update(msg, cx),
+            (Node::Enumeration(node), Msg::Enumeration(msg)) => node.update(msg, cx)?,
+            (Node::Boolean(node), Msg::Bool(msg)) => node.update(msg, cx)?,
+            (Node::Float(node), Msg::Float(msg)) => node.update(msg, cx)?,
+            (Node::Integer(node), Msg::Integer(msg)) => node.update(msg, cx)?,
             (Node::Command(node), Msg::Command(msg)) => node.update(msg, cx)?,
             (Node::String(node), Msg::String(msg)) => node.update(msg, cx)?,
             (Node::Category(node), Msg::Category(msg)) => node.update(msg, cx)?,

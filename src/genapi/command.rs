@@ -32,16 +32,17 @@ impl Node {
     pub fn view(
         &mut self,
         ctx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
-    ) -> Element<Msg> {
+    ) -> Result<Element<Msg>> {
         let name = Text::new(&self.name).width(Length::FillPortion(1));
-        let value: Element<_> = match self.inner.is_writable(ctx) {
-            Ok(true) => Button::new(&mut self.execute, Text::new("Execute"))
+        let value: Element<_> = if self.inner.is_writable(ctx)? {
+            Button::new(&mut self.execute, Text::new("Execute"))
                 .on_press(Msg::Execute)
                 .width(Length::FillPortion(1))
-                .into(),
-            _ => util::not_available().width(Length::FillPortion(1)).into(),
+                .into()
+        } else {
+            util::not_available().width(Length::FillPortion(1)).into()
         };
-        Row::new().push(name).push(value).into()
+        Ok(Row::new().push(name).push(value).into())
     }
 
     pub fn update(

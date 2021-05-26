@@ -1,8 +1,10 @@
+use crate::Result;
 use cameleon::{
     genapi::{node_kind::BooleanNode, GenApiCtxt, ParamsCtxt},
     DeviceControl,
 };
 use iced::{Checkbox, Element, Length, Row, Text};
+
 pub struct Node {
     inner: BooleanNode,
     name: String,
@@ -12,7 +14,7 @@ use super::util;
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    Selected(bool),
+    Select(bool),
     Ignore(bool),
 }
 
@@ -30,12 +32,12 @@ impl Node {
     pub fn view<T: DeviceControl, U: GenApiCtxt>(
         &mut self,
         cx: &mut ParamsCtxt<T, U>,
-    ) -> Element<Msg> {
+    ) -> Result<Element<Msg>> {
         let name = Text::new(&self.name).width(Length::FillPortion(1));
-        let value: Element<_> = if self.inner.is_readable(cx).unwrap() {
-            let value = self.inner.value(cx).unwrap();
-            let msg = if self.inner.is_writable(cx).unwrap() {
-                Msg::Selected
+        let value: Element<_> = if self.inner.is_readable(cx)? {
+            let value = self.inner.value(cx)?;
+            let msg = if self.inner.is_writable(cx)? {
+                Msg::Select
             } else {
                 Msg::Ignore
             };
@@ -45,22 +47,20 @@ impl Node {
         } else {
             util::not_available().width(Length::FillPortion(1)).into()
         };
-        Row::new().push(name).push(value).into()
+        Ok(Row::new().push(name).push(value).into())
     }
 
     pub fn update<T: DeviceControl, U: GenApiCtxt>(
         &mut self,
         message: Msg,
         cx: &mut ParamsCtxt<T, U>,
-    ) {
-        match message {
-            Msg::Selected(value) => {
-                if !self.inner.is_writable(cx).unwrap() {
-                    return;
-                }
-                self.inner.set_value(cx, value).unwrap();
+    ) -> Result<()> {
+        if let Msg::Select(value) = message {
+            if !self.inner.is_writable(cx)? {
+                return Ok(());
             }
-            Msg::Ignore(_) => (),
+            self.inner.set_value(cx, value)?;
         }
+        Ok(())
     }
 }

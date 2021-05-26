@@ -1,4 +1,5 @@
 use super::util;
+use crate::Result;
 use cameleon::{
     genapi::{node_kind::IntegerNode, GenApiCtxt, ParamsCtxt},
     DeviceControl,
@@ -13,7 +14,7 @@ pub struct Node {
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    Changed(String),
+    Change(String),
 }
 
 impl Node {
@@ -23,7 +24,7 @@ impl Node {
     ) -> Self {
         Self {
             inner,
-            name: inner.as_node().name(cx).to_string(),
+            name: inner.as_node().display_name(cx).to_string(),
             state: text_input::State::new(),
         }
     }
@@ -31,12 +32,12 @@ impl Node {
     pub fn view(
         &mut self,
         cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
-    ) -> Element<Msg> {
+    ) -> Result<Element<Msg>> {
         let name = Text::new(&self.name).width(Length::FillPortion(1));
         let value: Element<_> = if let Ok(value) = self.inner.value(cx) {
             let value = &value.to_string();
-            if self.inner.is_writable(cx).unwrap() {
-                TextInput::new(&mut self.state, "", value, Msg::Changed)
+            if self.inner.is_writable(cx)? {
+                TextInput::new(&mut self.state, "", value, Msg::Change)
                     .width(Length::FillPortion(1))
                     .into()
             } else {
@@ -45,19 +46,21 @@ impl Node {
         } else {
             util::not_available().width(Length::FillPortion(1)).into()
         };
-        Row::new().push(name).push(value).into()
+        Ok(Row::new().push(name).push(value).into())
     }
 
-    pub fn update(&mut self, msg: Msg, cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>) {
-        match msg {
-            Msg::Changed(s) => {
-                if !self.inner.is_writable(cx).unwrap() {
-                    return;
-                }
-                if let Ok(value) = s.parse::<i64>() {
-                    self.inner.set_value(cx, value).unwrap()
-                }
-            }
+    pub fn update(
+        &mut self,
+        msg: Msg,
+        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+    ) -> Result<()> {
+        let Msg::Change(s) = msg;
+        if !self.inner.is_writable(cx)? {
+            return Ok(());
         }
+        if let Ok(value) = s.parse::<i64>() {
+            self.inner.set_value(cx, value)?
+        }
+        Ok(())
     }
 }
