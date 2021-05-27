@@ -1,6 +1,7 @@
-use cameleon::payload::Payload;
+use anyhow::anyhow;
+use cameleon::payload::ImageInfo;
 use cameleon_device::PixelFormat;
-
+use image::DynamicImage;
 use opencv::core as cv_core;
 use opencv::imgproc;
 use opencv::prelude::*;
@@ -21,18 +22,17 @@ fn code(pf: PixelFormat) -> Option<i32> {
     }
 }
 
-pub fn convert(payload: &Payload) -> Result<image::ImageBuffer<image::Bgra<u8>, Vec<u8>>> {
-    let info = payload.image_info();
-    if info.is_none() {
-        return Err(Error::FailedConversion);
-    }
-    let info = info.unwrap();
+fn into_failed(err: impl std::error::Error + Send + Sync + 'static) -> Error {
+    Error::FailedConversion(err.into())
+}
+
+pub fn convert_impl(buf: &[u8], info: &ImageInfo) -> Result<DynamicImage> {
+    let mut buf = buf.to_vec();
     let width = info.width as i32;
     let height = info.height as i32;
     let pf = info.pixel_format;
-    let mut frame = payload.image().unwrap();
-    let channel = frame.len() / (width * height) as usize;
-    let data = frame.as_mut_ptr() as *mut libc::c_void;
+    let channel = buf.len() / (width * height) as usize;
+    let data = buf.as_mut_ptr() as *mut libc::c_void;
     let src = unsafe {
         Mat::new_rows_cols_with_data(
             height,
@@ -42,17 +42,24 @@ pub fn convert(payload: &Payload) -> Result<image::ImageBuffer<image::Bgra<u8>, 
             cv_core::Mat_AUTO_STEP,
         )
     }
-    .unwrap();
+    .map_err(into_failed)?;
     let mut dst = Mat::default();
     if let Some(code) = code(pf) {
-        imgproc::cvt_color(&src, &mut dst, code, 0).unwrap();
-        let len = (dst.cols() * dst.rows() * dst.channels().unwrap()) as usize;
-        let dst_slice =
-            unsafe { std::slice::from_raw_parts(dst.data().unwrap() as *const u8, len) };
+        imgproc::cvt_color(&src, &mut dst, code, 0).map_err(into_failed)?;
+        let len = (dst.cols() * dst.rows() * dst.channels().map_err(into_failed)?) as usize;
+        let dst_slice = unsafe {
+            std::slice::from_raw_parts(dst.data().map_err(into_failed)? as *const u8, len)
+        };
         let mut dst_vec = Vec::new();
         dst_vec.extend_from_slice(dst_slice);
-        Ok(image::ImageBuffer::from_raw(width as u32, height as u32, dst_vec).unwrap())
+        Ok(DynamicImage::ImageBgra8(
+            image::ImageBuffer::from_raw(width as u32, height as u32, dst_vec)
+                .ok_or_else(|| Error::FailedConversion(anyhow!("wrong image data")))?,
+        ))
     } else {
-        Err(Error::FailedConversion)
+        Err(Error::FailedConversion(anyhow!(
+            "unsupported pixel format: {:?}",
+            pf
+        )))
     }
 }
