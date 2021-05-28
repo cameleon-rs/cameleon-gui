@@ -1,14 +1,12 @@
-use std::collections::HashSet;
 use std::{collections::BTreeMap, time::Duration};
 
 use iced::{
-    button, scrollable, time, Button, Checkbox, Column, Command, Container, Element, Length, Row,
+    button, scrollable, time, Button, Checkbox, Column, Container, Element, Length, Row,
     Scrollable, Space, Subscription, Text,
 };
 
 use super::style::WithBorder;
 use super::{
-    camera::{enumerate_cameras, Camera},
     context::{CameraId, Context},
     Result,
 };
@@ -18,6 +16,13 @@ pub enum Msg {
     Select(CameraId),
     EnableAutoRefresh(bool),
     Refresh,
+    Add(CameraId),
+    Remove(CameraId),
+}
+
+pub enum OutMsg {
+    UpdateContext,
+    None,
 }
 
 #[derive(Debug, Default)]
@@ -55,13 +60,28 @@ impl Selector {
         Container::new(content).style(WithBorder).into()
     }
 
-    pub fn update(&mut self, msg: Msg, ctx: &mut Context) -> Result<Command<Msg>> {
+    pub fn update(&mut self, msg: Msg, ctx: &mut Context) -> Result<OutMsg> {
         match msg {
-            Msg::Select(id) => ctx.select(id)?,
-            Msg::Refresh => self.refresh(ctx)?,
-            Msg::EnableAutoRefresh(auto_refresh) => self.auto_refresh = auto_refresh,
+            Msg::Select(id) => {
+                ctx.select(id)?;
+                Ok(OutMsg::None)
+            }
+            Msg::Refresh => Ok(OutMsg::UpdateContext),
+            Msg::EnableAutoRefresh(auto_refresh) => {
+                self.auto_refresh = auto_refresh;
+                Ok(OutMsg::None)
+            }
+            Msg::Add(id) => {
+                self.options
+                    .entry(id)
+                    .or_insert_with_key(|id| (id.name(ctx), button::State::new()));
+                Ok(OutMsg::None)
+            }
+            Msg::Remove(id) => {
+                self.options.remove(&id);
+                Ok(OutMsg::None)
+            }
         }
-        Ok(Command::none())
     }
 
     pub fn subscription(&self) -> Subscription<Msg> {
@@ -71,48 +91,24 @@ impl Selector {
             Subscription::none()
         }
     }
-
-    fn refresh(&mut self, ctx: &mut Context) -> Result<()> {
-        let cameras = enumerate_cameras()?;
-        let det_ids: HashSet<_> = cameras.into_iter().map(|cam| ctx.add(cam)).collect();
-        let ids: HashSet<_> = ctx.cameras().copied().collect();
-        for disappered in ids.difference(&det_ids) {
-            ctx.remove(*disappered)?;
-        }
-        self.options = ctx
-            .cameras()
-            .map(|id| {
-                ctx.with_camera_or_else(
-                    *id,
-                    || unreachable!(),
-                    |cam| (*id, (name(cam), button::State::new())),
-                )
-            })
-            .collect();
-
-        if ctx.selected().is_none() {
-            if let Some(id) = self.options.keys().next() {
-                ctx.select(*id)?;
-            }
-        }
-
-        Ok(())
-    }
 }
 
-fn name(camera: &Camera) -> String {
-    let info = camera.info();
-    let name = match camera.ctrl.user_defined_name() {
-        Some(name) => {
-            if !name.is_empty() {
-                name
-            } else {
-                &info.model_name
+impl CameraId {
+    fn name(self, ctx: &Context) -> String {
+        let cam = &ctx[self];
+        let info = cam.info();
+        let name = match cam.ctrl.user_defined_name() {
+            Some(name) => {
+                if !name.is_empty() {
+                    name
+                } else {
+                    &info.model_name
+                }
             }
-        }
-        None => &info.model_name,
-    };
-    format!("{} ({})", name, info.serial_number)
+            None => &info.model_name,
+        };
+        format!("{} ({})", name, info.serial_number)
+    }
 }
 
 mod style {

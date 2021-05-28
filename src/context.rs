@@ -1,7 +1,8 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
     iter::Iterator,
+    ops::{Index, IndexMut},
 };
 
 use cameleon::{
@@ -11,9 +12,10 @@ use cameleon::{
     DeviceControl, PayloadStream,
 };
 
-use crate::camera::ControlHandle;
-
-use super::{camera::Camera, Error, Result};
+use super::{
+    camera::{enumerate_cameras, Camera, ControlHandle},
+    Error, Result,
+};
 
 #[derive(Default)]
 pub struct Context {
@@ -21,24 +23,19 @@ pub struct Context {
     selected: Option<CameraId>,
 }
 
+pub enum Msg {
+    Update,
+}
+
+pub enum OutMsg {
+    Add(CameraId),
+    Remove(CameraId),
+}
+
 impl Context {
     pub fn select(&mut self, id: CameraId) -> Result<()> {
         if self.cameras.contains_key(&id) {
             self.selected = Some(id);
-            Ok(())
-        } else {
-            Err(Error::NotFound(id))
-        }
-    }
-
-    pub fn add(&mut self, camera: Camera) -> CameraId {
-        let id = CameraId::new(camera.info());
-        self.cameras.entry(id).or_insert(camera);
-        id
-    }
-
-    pub fn remove(&mut self, id: CameraId) -> Result<()> {
-        if self.cameras.remove(&id).is_some() {
             Ok(())
         } else {
             Err(Error::NotFound(id))
@@ -61,52 +58,50 @@ impl Context {
         self.cameras.keys()
     }
 
-    pub fn with_camera_or_else<D, F, R>(&self, id: CameraId, default: D, f: F) -> R
-    where
-        D: FnOnce() -> R,
-        F: FnOnce(&Camera) -> R,
-    {
-        if let Some(cam) = self.get(id) {
-            f(cam)
-        } else {
-            default()
-        }
+    pub fn update(&mut self, _msg: Msg) -> Result<Vec<OutMsg>> {
+        let old_ids: HashSet<CameraId> = self.cameras().copied().collect();
+        let cameras = enumerate_cameras()?;
+        let added: HashSet<CameraId> = cameras.into_iter().map(|cam| self.add(cam)).collect();
+        let removed = old_ids
+            .difference(&added)
+            .map(|id| self.remove(*id))
+            .map(OutMsg::Remove);
+        let newly_added = added.difference(&old_ids).copied().map(OutMsg::Add);
+        Ok(removed.chain(newly_added).collect())
     }
 
-    pub fn with_camera_mut_or_else<D, F, R>(&mut self, id: CameraId, default: D, f: F) -> R
-    where
-        D: FnOnce() -> R,
-        F: FnOnce(&mut Camera) -> R,
-    {
-        if let Some(cam) = self.get_mut(id) {
-            f(cam)
-        } else {
-            default()
-        }
+    fn add(&mut self, camera: Camera) -> CameraId {
+        let id = id(camera.info());
+        self.cameras.entry(id).or_insert(camera);
+        id
     }
 
-    pub fn with_selected_or_else<D, F, R>(&self, default: D, f: F) -> R
-    where
-        D: FnOnce() -> R,
-        F: FnOnce(&Camera) -> R,
-    {
-        if let Some(id) = self.selected() {
-            self.with_camera_or_else(id, default, f)
-        } else {
-            default()
+    fn remove(&mut self, id: CameraId) -> CameraId {
+        self.cameras.remove(&id);
+        if self.selected == Some(id) {
+            self.selected = None
         }
+        id
     }
+}
 
-    pub fn with_selected_mut_or_else<D, F, R>(&mut self, default: D, f: F) -> R
-    where
-        D: FnOnce() -> R,
-        F: FnOnce(&mut Camera) -> R,
-    {
-        if let Some(id) = self.selected() {
-            self.with_camera_mut_or_else(id, default, f)
-        } else {
-            default()
-        }
+fn id(info: &CameraInfo) -> CameraId {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    info.hash(&mut hasher);
+    let hash = hasher.finish();
+    CameraId(hash)
+}
+
+impl Index<CameraId> for Context {
+    type Output = Camera;
+    fn index(&self, index: CameraId) -> &Self::Output {
+        self.get(index).unwrap()
+    }
+}
+
+impl IndexMut<CameraId> for Context {
+    fn index_mut(&mut self, index: CameraId) -> &mut Self::Output {
+        self.get_mut(index).unwrap()
     }
 }
 
@@ -115,61 +110,46 @@ pub struct CameraId(u64);
 
 impl CameraId {
     pub fn open(self, ctx: &mut Context) -> Result<()> {
-        ctx.with_camera_mut_or_else(
-            self,
-            || Err(Error::NotFound(self)),
-            |cam| {
-                cam.open()?;
-                cam.load_context()?;
-                Ok(())
-            },
-        )
+        let cam = &mut ctx[self];
+        cam.open()?;
+        cam.load_context()?;
+        Ok(())
     }
 
     pub fn close(self, ctx: &mut Context) -> Result<()> {
-        ctx.with_camera_mut_or_else(
-            self,
-            || Err(Error::NotFound(self)),
-            |cam| cam.close().map_err(Into::into),
-        )
+        let cam = &mut ctx[self];
+        cam.close()?;
+        Ok(())
     }
 
     pub fn start_streaming(self, ctx: &mut Context) -> Result<PayloadReceiver> {
-        ctx.with_camera_mut_or_else(
-            self,
-            || Err(Error::NotFound(self)),
-            |cam| cam.start_streaming(1).map_err(Into::into),
-        )
+        let cam = &mut ctx[self];
+        let receiver = cam.start_streaming(1)?;
+        Ok(receiver)
     }
 
     pub fn stop_streaming(self, ctx: &mut Context) -> Result<()> {
-        ctx.with_camera_mut_or_else(
-            self,
-            || Err(Error::NotFound(self)),
-            |cam| cam.stop_streaming().map_err(Into::into),
-        )
+        let cam = &mut ctx[self];
+        cam.stop_streaming()?;
+        Ok(())
     }
 
     pub fn is_opened(self, ctx: &Context) -> bool {
-        ctx.with_camera_or_else(self, || false, |cam| cam.ctrl.is_opened())
+        let cam = &ctx[self];
+        cam.ctrl.is_opened()
     }
 
     pub fn is_streaming(self, ctx: &Context) -> bool {
-        ctx.with_camera_or_else(self, || false, |cam| cam.strm.is_loop_running())
+        let cam = &ctx[self];
+        cam.strm.is_loop_running()
     }
 
     pub fn params_ctxt(
         self,
         ctx: &mut Context,
     ) -> Result<ParamsCtxt<&mut ControlHandle, &mut DefaultGenApiCtxt>> {
-        let cam = ctx.get_mut(self).ok_or(Error::NotFound(self))?;
-        cam.params_ctxt().map_err(Into::into)
-    }
-
-    fn new(info: &CameraInfo) -> Self {
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        info.hash(&mut hasher);
-        let hash = hasher.finish();
-        Self(hash)
+        let cam = &mut ctx[self];
+        let params_ctx = cam.params_ctxt()?;
+        Ok(params_ctx)
     }
 }

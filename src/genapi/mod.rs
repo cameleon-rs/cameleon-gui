@@ -27,7 +27,17 @@ pub struct GenApi {
 }
 
 impl GenApi {
-    pub fn new<T: DeviceControl, U: GenApiCtxt>(ctxt: &mut ParamsCtxt<T, U>) -> Result<Self> {
+    pub fn new() -> Self {
+        Self {
+            categories: Vec::new(),
+            scrollable: scrollable::State::new(),
+        }
+    }
+
+    pub fn load<T: DeviceControl, U: GenApiCtxt>(
+        &mut self,
+        ctxt: &mut ParamsCtxt<T, U>,
+    ) -> Result<()> {
         let root = ctxt
             .node("Root")
             .ok_or_else(|| Error::InternelError("`Root` node must exist".into()))?
@@ -38,10 +48,8 @@ impl GenApi {
             .into_iter()
             .filter_map(|node| Some(category::Node::new(node.as_category(ctxt)?, ctxt)))
             .collect();
-        Ok(Self {
-            categories,
-            scrollable: scrollable::State::new(),
-        })
+        self.categories = categories;
+        Ok(())
     }
 
     pub fn view<T: DeviceControl, U: GenApiCtxt>(

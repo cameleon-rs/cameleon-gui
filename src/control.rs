@@ -17,6 +17,7 @@ pub enum OutMsg {
     Close(CameraId),
     StartStreaming(CameraId, PayloadReceiver),
     StopStreaming(CameraId),
+    None,
 }
 
 #[derive(Debug, Default)]
@@ -58,38 +59,38 @@ impl Control {
             .into()
     }
 
-    pub fn update(&mut self, msg: Msg, ctx: &mut Context) -> Result<Option<OutMsg>> {
+    pub fn update(&mut self, msg: Msg, ctx: &mut Context) -> Result<OutMsg> {
         match msg {
             Msg::Open => {
                 if let Some(cam) = ctx.selected() {
                     cam.open(ctx)?;
-                    Ok(Some(OutMsg::Open(cam)))
+                    Ok(OutMsg::Open(cam))
                 } else {
-                    Ok(None)
+                    Ok(OutMsg::None)
                 }
             }
             Msg::Close => {
                 if let Some(cam) = ctx.selected() {
                     cam.close(ctx)?;
-                    Ok(Some(OutMsg::Close(cam)))
+                    Ok(OutMsg::Close(cam))
                 } else {
-                    Ok(None)
+                    Ok(OutMsg::None)
                 }
             }
             Msg::StartStreaming => {
                 if let Some(cam) = ctx.selected() {
                     let recevier = cam.start_streaming(ctx)?;
-                    Ok(Some(OutMsg::StartStreaming(cam, recevier)))
+                    Ok(OutMsg::StartStreaming(cam, recevier))
                 } else {
-                    Ok(None)
+                    Ok(OutMsg::None)
                 }
             }
             Msg::StopStreaming => {
                 if let Some(cam) = ctx.selected() {
                     cam.stop_streaming(ctx)?;
-                    Ok(Some(OutMsg::StopStreaming(cam)))
+                    Ok(OutMsg::StopStreaming(cam))
                 } else {
-                    Ok(None)
+                    Ok(OutMsg::None)
                 }
             }
         }

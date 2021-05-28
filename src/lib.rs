@@ -1,5 +1,3 @@
-#![deny(clippy::all)]
-
 use context::CameraId;
 use derive_more::From;
 use iced::{
@@ -128,9 +126,33 @@ impl Application for App {
 }
 
 impl App {
+    fn update_context(&mut self, msg: context::Msg) -> Command<Msg> {
+        match self.ctx.update(msg) {
+            Ok(msgs) => {
+                for msg in msgs {
+                    match msg {
+                        context::OutMsg::Add(id) => {
+                            self.update_selector(selector::Msg::Add(id));
+                            self.update_features(features::Msg::Add(id));
+                        }
+                        context::OutMsg::Remove(id) => {
+                            self.update_selector(selector::Msg::Remove(id));
+                            self.update_features(features::Msg::Remove(id));
+                        }
+                    }
+                }
+                Command::none()
+            }
+            Err(err) => {
+                tracing::trace!("{}", err);
+                Command::none()
+            }
+        }
+    }
+
     fn update_control(&mut self, msg: control::Msg) -> Command<Msg> {
         match self.control.update(msg, &mut self.ctx) {
-            Ok(Some(out)) => match out {
+            Ok(out) => match out {
                 control::OutMsg::Open(id) => self.update_features(features::Msg::Load(id)),
                 control::OutMsg::StartStreaming(_id, receiver) => {
                     self.update_frame(frame::Msg::Attach(receiver))
@@ -138,7 +160,6 @@ impl App {
                 control::OutMsg::StopStreaming(_) => self.update_frame(frame::Msg::Detach),
                 _ => Command::none(),
             },
-            Ok(None) => Command::none(),
             Err(err) => {
                 tracing::error!("{}", err);
                 Command::none()
@@ -148,7 +169,10 @@ impl App {
 
     fn update_selector(&mut self, msg: selector::Msg) -> Command<Msg> {
         match self.selector.update(msg, &mut self.ctx) {
-            Ok(cmd) => cmd.map(Into::into),
+            Ok(msg) => match msg {
+                selector::OutMsg::UpdateContext => self.update_context(context::Msg::Update),
+                _ => Command::none(),
+            },
             Err(err) => {
                 tracing::error!("{}", err);
                 Command::none()

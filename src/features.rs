@@ -5,13 +5,17 @@ use super::{
     Error, Result,
 };
 use iced::{Element, Length, Space};
-use if_chain::if_chain;
-use std::collections::{hash_map, HashMap};
+use std::{
+    collections::HashMap,
+    ops::{Index, IndexMut},
+};
 
 #[derive(Debug)]
 pub enum Msg {
     GenApi(CameraId, genapi::Msg),
     Load(CameraId),
+    Add(CameraId),
+    Remove(CameraId),
 }
 
 #[derive(Default)]
@@ -27,17 +31,19 @@ macro_rules! space {
 
 impl Features {
     pub fn view(&mut self, ctx: &mut Context) -> Element<Msg> {
-        if_chain! {
-            if let Some(selected) = ctx.selected();
-            if selected.is_opened(ctx);
-            if let Some(genapi) = self.genapis.get_mut(&selected);
-            if let Some(cam) = ctx.get_mut(selected);
-            if let Ok(params_ctx) = &mut cam.params_ctxt();
-            then {
-                genapi.view(params_ctx).map(move |msg| Msg::GenApi(selected, msg))
-            } else {
-                space!()
+        if let Some(selected) = ctx.selected() {
+            let genapi = &mut self[selected];
+            match selected.params_ctxt(ctx) {
+                Ok(mut params_ctx) => genapi
+                    .view(&mut params_ctx)
+                    .map(move |msg| Msg::GenApi(selected, msg)),
+                Err(err) => {
+                    tracing::trace!("{}", err);
+                    space!()
+                }
             }
+        } else {
+            space!()
         }
     }
 
@@ -49,12 +55,29 @@ impl Features {
                     genapi.update(msg, &mut cam.params_ctxt()?)?;
                 }
             }
+            Msg::Add(id) => {
+                self.genapis.entry(id).or_insert_with(GenApi::new);
+            }
+            Msg::Remove(id) => {
+                self.genapis.remove(&id);
+            }
             Msg::Load(id) => {
-                if let hash_map::Entry::Vacant(vacant) = self.genapis.entry(id) {
-                    vacant.insert(GenApi::new(&mut id.params_ctxt(ctx)?)?);
-                }
+                self[id].load(&mut id.params_ctxt(ctx)?)?;
             }
         }
         Ok(())
+    }
+}
+
+impl Index<CameraId> for Features {
+    type Output = GenApi;
+    fn index(&self, index: CameraId) -> &Self::Output {
+        self.genapis.get(&index).unwrap()
+    }
+}
+
+impl IndexMut<CameraId> for Features {
+    fn index_mut(&mut self, index: CameraId) -> &mut Self::Output {
+        self.genapis.get_mut(&index).unwrap()
     }
 }
