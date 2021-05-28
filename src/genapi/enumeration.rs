@@ -44,14 +44,14 @@ pub enum Msg {
 impl Node {
     pub fn new(
         inner: EnumerationNode,
-        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+        ctx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Self {
         Self {
             inner,
-            name: inner.as_node().name(cx).to_string(),
+            name: inner.as_node().name(ctx).to_string(),
             state: pick_list::State::default(),
             entries: inner
-                .entries(cx)
+                .entries(ctx)
                 .iter()
                 .map(|raw| Entry::new(raw))
                 .collect(),
@@ -60,13 +60,13 @@ impl Node {
 
     pub fn view(
         &mut self,
-        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+        ctx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Result<Element<Msg>> {
         let name = Text::new(&self.name).width(Length::FillPortion(1));
-        let value: Element<_> = if self.inner.is_readable(cx)? {
-            let current = self.inner.current_entry(cx)?;
+        let value: Element<_> = if self.inner.is_readable(ctx)? {
+            let current = self.inner.current_entry(ctx)?;
             let current = Entry::new(current);
-            if self.inner.is_writable(cx)? {
+            if self.inner.is_writable(ctx)? {
                 PickList::new(&mut self.state, &self.entries, Some(current), Msg::Select)
                     .width(Length::FillPortion(1))
                     .into()
@@ -82,13 +82,13 @@ impl Node {
     pub fn update(
         &mut self,
         msg: Msg,
-        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+        ctx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Result<()> {
         let Msg::Select(entry) = msg;
-        if !self.inner.is_writable(cx)? {
+        if !self.inner.is_writable(ctx)? {
             return Ok(());
         }
-        self.inner.set_entry_by_value(cx, entry.value)?;
+        self.inner.set_entry_by_value(ctx, entry.value)?;
         Ok(())
     }
 }

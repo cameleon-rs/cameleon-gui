@@ -31,11 +31,11 @@ impl Node {
 
     pub fn view(
         &mut self,
-        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+        ctx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Result<Element<Msg>> {
         let name = Text::new(&self.name).width(Length::FillPortion(1));
-        let value: Element<_> = if let Ok(value) = self.inner.value(cx) {
-            if self.inner.is_writable(cx)? {
+        let value: Element<_> = if let Ok(value) = self.inner.value(ctx) {
+            if self.inner.is_writable(ctx)? {
                 TextInput::new(&mut self.state, "", &value, Msg::Change)
                     .width(Length::FillPortion(1))
                     .into()
@@ -51,12 +51,12 @@ impl Node {
     pub fn update(
         &mut self,
         msg: Msg,
-        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+        ctx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Result<()> {
         match msg {
             Msg::Change(s) => {
-                if self.inner.is_writable(cx)? {
-                    Ok(self.inner.set_value(cx, s)?)
+                if self.inner.is_writable(ctx)? {
+                    Ok(self.inner.set_value(ctx, s)?)
                 } else {
                     Ok(())
                 }

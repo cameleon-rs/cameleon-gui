@@ -36,17 +36,17 @@ impl GenApi {
 
     pub fn load<T: DeviceControl, U: GenApiCtxt>(
         &mut self,
-        ctxt: &mut ParamsCtxt<T, U>,
+        ctx: &mut ParamsCtxt<T, U>,
     ) -> Result<()> {
-        let root = ctxt
+        let root = ctx
             .node("Root")
             .ok_or_else(|| Error::InternelError("`Root` node must exist".into()))?
-            .as_category(ctxt)
+            .as_category(ctx)
             .ok_or_else(|| Error::InternelError("`Root` node must implement `ICategory`".into()))?;
         let categories = root
-            .nodes(ctxt)
+            .nodes(ctx)
             .into_iter()
-            .filter_map(|node| Some(category::Node::new(node.as_category(ctxt)?, ctxt)))
+            .filter_map(|node| Some(category::Node::new(node.as_category(ctx)?, ctx)))
             .collect();
         self.categories = categories;
         Ok(())

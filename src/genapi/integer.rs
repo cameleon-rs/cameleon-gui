@@ -20,23 +20,23 @@ pub enum Msg {
 impl Node {
     pub fn new(
         inner: IntegerNode,
-        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+        ctx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Self {
         Self {
             inner,
-            name: inner.as_node().display_name(cx).to_string(),
+            name: inner.as_node().display_name(ctx).to_string(),
             state: text_input::State::new(),
         }
     }
 
     pub fn view(
         &mut self,
-        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+        ctx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Result<Element<Msg>> {
         let name = Text::new(&self.name).width(Length::FillPortion(1));
-        let value: Element<_> = if let Ok(value) = self.inner.value(cx) {
+        let value: Element<_> = if let Ok(value) = self.inner.value(ctx) {
             let value = &value.to_string();
-            if self.inner.is_writable(cx)? {
+            if self.inner.is_writable(ctx)? {
                 TextInput::new(&mut self.state, "", value, Msg::Change)
                     .width(Length::FillPortion(1))
                     .into()
@@ -52,14 +52,14 @@ impl Node {
     pub fn update(
         &mut self,
         msg: Msg,
-        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+        ctx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Result<()> {
         let Msg::Change(s) = msg;
-        if !self.inner.is_writable(cx)? {
+        if !self.inner.is_writable(ctx)? {
             return Ok(());
         }
         if let Ok(value) = s.parse::<i64>() {
-            self.inner.set_value(cx, value)?
+            self.inner.set_value(ctx, value)?
         }
         Ok(())
     }

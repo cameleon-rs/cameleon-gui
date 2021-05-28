@@ -26,13 +26,13 @@ const SPACE_OFFSET: u16 = 0;
 impl Node {
     pub fn new(
         inner: CategoryNode,
-        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+        ctx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Self {
-        let name = inner.as_node().name(cx).to_string();
-        let nodes = inner.nodes(cx);
+        let name = inner.as_node().name(ctx).to_string();
+        let nodes = inner.nodes(ctx);
         let nodes: Vec<_> = nodes
             .into_iter()
-            .filter(|node| !node.name(cx).starts_with("Chunk"))
+            .filter(|node| !node.name(ctx).starts_with("Chunk"))
             .collect();
         Self {
             _inner: inner,
@@ -40,7 +40,7 @@ impl Node {
             expanded: false,
             features: nodes
                 .into_iter()
-                .filter_map(|node| node::Node::new(node, cx))
+                .filter_map(|node| node::Node::new(node, ctx))
                 .collect(),
             expand: button::State::new(),
         }
@@ -48,7 +48,7 @@ impl Node {
 
     pub fn view(
         &mut self,
-        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+        ctx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Element<Msg> {
         let mut column = Column::new().push(
             Button::new(&mut self.expand, Text::new(&self.name))
@@ -62,7 +62,7 @@ impl Node {
                     .iter_mut()
                     .enumerate()
                     .fold(Column::new(), |column, (i, feature)| {
-                        match feature.view(cx) {
+                        match feature.view(ctx) {
                             Ok(elm) => column.push(elm.map(move |msg| Msg::Node(i, Box::new(msg)))),
                             Err(err) => {
                                 trace!("{}", err);
@@ -82,11 +82,11 @@ impl Node {
             .into()
     }
 
-    #[tracing::instrument(skip(self, cx), level = "trace")]
+    #[tracing::instrument(skip(self, ctx), level = "trace")]
     pub fn update(
         &mut self,
         msg: Msg,
-        cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
+        ctx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Result<()> {
         match msg {
             Msg::Expand => {
@@ -95,7 +95,7 @@ impl Node {
                 trace!("num of features: {}", self.features.len());
                 Ok(())
             }
-            Msg::Node(i, msg) => self.features[i].update(*msg, cx),
+            Msg::Node(i, msg) => self.features[i].update(*msg, ctx),
         }
     }
 }

@@ -144,7 +144,7 @@ impl CameraId {
         cam.strm.is_loop_running()
     }
 
-    pub fn params_ctxt(
+    pub fn params_ctx(
         self,
         ctx: &mut Context,
     ) -> Result<ParamsCtxt<&mut ControlHandle, &mut DefaultGenApiCtxt>> {
