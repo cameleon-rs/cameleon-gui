@@ -10,14 +10,19 @@ use crate::{Error, Result};
 
 fn code(pf: PixelFormat) -> Option<i32> {
     match pf {
+        // Gray
         PixelFormat::Mono8 => Some(imgproc::COLOR_GRAY2BGRA),
         PixelFormat::Mono12 => None,
+        // BGR
         PixelFormat::RGB8 => Some(imgproc::COLOR_RGB2BGRA),
         PixelFormat::BGR8 => Some(imgproc::COLOR_BGR2BGRA),
+        // Bayer
         PixelFormat::BayerRG8 => Some(imgproc::COLOR_BayerRG2RGBA), // opencv's bug
         PixelFormat::BayerBG8 => Some(imgproc::COLOR_BayerBG2BGRA),
         PixelFormat::BayerGR8 => Some(imgproc::COLOR_BayerGR2BGRA),
         PixelFormat::BayerGB8 => Some(imgproc::COLOR_BayerGB2BGRA),
+        // YUYV
+        PixelFormat::YCbCr422_8 => Some(imgproc::COLOR_YUV2BGRA_YUY2),
         _ => None,
     }
 }
