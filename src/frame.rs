@@ -61,7 +61,7 @@ impl Frame {
         match msg {
             Msg::Acquired(payload) => {
                 tracing::info!("Acquired!!!");
-                self.handle = Some(convert(&payload).unwrap());
+                self.handle = Some(convert(&payload)?);
                 if let Some(receiver) = &mut self.receiver {
                     receiver.send_back(payload)
                 }

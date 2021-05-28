@@ -90,8 +90,10 @@ impl Selector {
             })
             .collect();
 
-        if ctx.selected().is_none() && !self.options.is_empty() {
-            ctx.select(*self.options.keys().next().unwrap()).unwrap();
+        if ctx.selected().is_none() {
+            if let Some(id) = self.options.keys().next() {
+                ctx.select(*id)?;
+            }
         }
 
         Ok(())

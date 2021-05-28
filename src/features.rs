@@ -6,7 +6,7 @@ use super::{
 };
 use iced::{Element, Length, Space};
 use if_chain::if_chain;
-use std::collections::HashMap;
+use std::collections::{hash_map, HashMap};
 
 #[derive(Debug)]
 pub enum Msg {
@@ -50,11 +50,8 @@ impl Features {
                 }
             }
             Msg::Load(id) => {
-                if !self.genapis.contains_key(&id) {
-                    if let Some(cam) = ctx.get_mut(id) {
-                        let genapi = GenApi::new(&mut cam.params_ctxt()?);
-                        self.genapis.insert(id, genapi);
-                    }
+                if let hash_map::Entry::Vacant(vacant) = self.genapis.entry(id) {
+                    vacant.insert(GenApi::new(&mut id.params_ctxt(ctx)?)?);
                 }
             }
         }

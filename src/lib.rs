@@ -5,6 +5,7 @@ use derive_more::From;
 use iced::{
     executor, Application, Clipboard, Color, Column, Command, Container, Element, Row, Subscription,
 };
+use std::borrow::Cow;
 use tracing::trace;
 
 mod camera;
@@ -42,10 +43,13 @@ pub enum Error {
     GenApiError(#[from] cameleon_genapi::GenApiError),
 
     #[error("failed conversion: {0}")]
-    FailedConversion(anyhow::Error),
+    ConversionError(anyhow::Error),
 
     #[error("not found: {0:?}")]
     NotFound(CameraId),
+
+    #[error("internal error: {0}")]
+    InternelError(Cow<'static, str>),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

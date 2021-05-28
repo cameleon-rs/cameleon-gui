@@ -6,7 +6,7 @@ use image::{Bgr, DynamicImage, GrayImage, ImageBuffer, RgbImage};
 
 macro_rules! failed {
     ($($arg: expr),*) => {
-        Error::FailedConversion(anyhow!($($arg),*))
+        Error::ConversionError(anyhow!($($arg),*))
     };
 }
 

@@ -4,7 +4,14 @@ use std::{
     iter::Iterator,
 };
 
-use cameleon::{camera::CameraInfo, payload::PayloadReceiver, DeviceControl, PayloadStream};
+use cameleon::{
+    camera::CameraInfo,
+    genapi::{DefaultGenApiCtxt, ParamsCtxt},
+    payload::PayloadReceiver,
+    DeviceControl, PayloadStream,
+};
+
+use crate::camera::ControlHandle;
 
 use super::{camera::Camera, Error, Result};
 
@@ -149,6 +156,14 @@ impl CameraId {
 
     pub fn is_streaming(self, ctx: &Context) -> bool {
         ctx.with_camera_or_else(self, || false, |cam| cam.strm.is_loop_running())
+    }
+
+    pub fn params_ctxt(
+        self,
+        ctx: &mut Context,
+    ) -> Result<ParamsCtxt<&mut ControlHandle, &mut DefaultGenApiCtxt>> {
+        let cam = ctx.get_mut(self).ok_or(Error::NotFound(self))?;
+        cam.params_ctxt().map_err(Into::into)
     }
 
     fn new(info: &CameraInfo) -> Self {

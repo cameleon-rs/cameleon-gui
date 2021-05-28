@@ -15,16 +15,16 @@ use iced::image::Handle;
 
 pub fn convert(payload: &Payload) -> Result<Handle> {
     if let PayloadType::Chunk = payload.payload_type() {
-        return Err(Error::FailedConversion(anyhow!(
+        return Err(Error::ConversionError(anyhow!(
             "unsupported chunk payload type"
         )));
     }
     let info = payload
         .image_info()
-        .ok_or_else(|| Error::FailedConversion(anyhow!("not image")))?;
+        .ok_or_else(|| Error::ConversionError(anyhow!("not image")))?;
     let buf = payload
         .image()
-        .ok_or_else(|| Error::FailedConversion(anyhow!("not image")))?;
+        .ok_or_else(|| Error::ConversionError(anyhow!("not image")))?;
     let image = convert_impl(buf, info)?;
     let bgra = image.into_bgra8();
     Ok(Handle::from_pixels(

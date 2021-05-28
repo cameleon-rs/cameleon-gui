@@ -1,11 +1,10 @@
+use crate::{Error, Result};
 use cameleon::{
     genapi::{GenApiCtxt, ParamsCtxt},
     DeviceControl,
 };
 use derive_more::From;
 use iced::{scrollable, Element, Scrollable};
-
-use crate::Result;
 
 mod boolean;
 mod category;
@@ -28,17 +27,21 @@ pub struct GenApi {
 }
 
 impl GenApi {
-    pub fn new<T: DeviceControl, U: GenApiCtxt>(ctxt: &mut ParamsCtxt<T, U>) -> Self {
-        let root = ctxt.node("Root").unwrap().as_category(ctxt).unwrap();
+    pub fn new<T: DeviceControl, U: GenApiCtxt>(ctxt: &mut ParamsCtxt<T, U>) -> Result<Self> {
+        let root = ctxt
+            .node("Root")
+            .ok_or_else(|| Error::InternelError("`Root` node must exist".into()))?
+            .as_category(ctxt)
+            .ok_or_else(|| Error::InternelError("`Root` node must implement `ICategory`".into()))?;
         let categories = root
             .nodes(ctxt)
             .into_iter()
-            .map(|node| category::Node::new(node.as_category(ctxt).unwrap(), ctxt))
+            .filter_map(|node| Some(category::Node::new(node.as_category(ctxt)?, ctxt)))
             .collect();
-        Self {
+        Ok(Self {
             categories,
             scrollable: scrollable::State::new(),
-        }
+        })
     }
 
     pub fn view<T: DeviceControl, U: GenApiCtxt>(

@@ -23,7 +23,7 @@ fn code(pf: PixelFormat) -> Option<i32> {
 }
 
 fn into_failed(err: impl std::error::Error + Send + Sync + 'static) -> Error {
-    Error::FailedConversion(err.into())
+    Error::ConversionError(err.into())
 }
 
 pub fn convert_impl(buf: &[u8], info: &ImageInfo) -> Result<DynamicImage> {
@@ -54,10 +54,10 @@ pub fn convert_impl(buf: &[u8], info: &ImageInfo) -> Result<DynamicImage> {
         dst_vec.extend_from_slice(dst_slice);
         Ok(DynamicImage::ImageBgra8(
             image::ImageBuffer::from_raw(width as u32, height as u32, dst_vec)
-                .ok_or_else(|| Error::FailedConversion(anyhow!("wrong image data")))?,
+                .ok_or_else(|| Error::ConversionError(anyhow!("wrong image data")))?,
         ))
     } else {
-        Err(Error::FailedConversion(anyhow!(
+        Err(Error::ConversionError(anyhow!(
             "unsupported pixel format: {:?}",
             pf
         )))
