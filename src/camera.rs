@@ -25,7 +25,7 @@ pub enum StreamHandle {
     U3V(u3v::StreamHandle),
 }
 
-macro_rules! delegate_immu {
+macro_rules! delegate {
     ($(fn $method:ident(&self $(,$arg:ident: $arg_ty:ty)*) -> $rt_ty: ty;)*) => {
         $(
             fn $method(&self $(,$arg: $arg_ty)*) -> $rt_ty {
@@ -75,7 +75,7 @@ impl DeviceControl for ControlHandle {
         fn disable_streaming(&mut self) -> ControlResult<()>;
     }
 
-    delegate_immu! {
+    delegate! {
         fn is_opened(&self) -> bool;
     }
 }
@@ -89,7 +89,7 @@ impl PayloadStream for StreamHandle {
 
     }
 
-    delegate_immu! {
+    delegate! {
         fn is_loop_running(&self) -> bool;
     }
 }

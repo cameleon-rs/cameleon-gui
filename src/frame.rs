@@ -59,7 +59,6 @@ impl Frame {
     pub fn update(&mut self, msg: Msg, _ctx: &mut Context) -> Result<Command<Msg>> {
         match msg {
             Msg::Acquired(payload) => {
-                tracing::info!("Acquired!!!");
                 self.handle = Some(convert(&payload)?);
                 if let Some(receiver) = &mut self.receiver {
                     receiver.send_back(payload)
