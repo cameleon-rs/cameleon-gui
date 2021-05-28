@@ -34,8 +34,7 @@ impl<H: Hasher, E> iced_futures::subscription::Recipe<H, E> for Receiver {
     }
 
     fn stream(self: Box<Self>, _input: BoxStream<E>) -> BoxStream<Self::Output> {
-        let receiver = self.inner.clone();
-        Box::pin(futures::stream::unfold(receiver, move |r| async move {
+        Box::pin(futures::stream::unfold(self.inner, move |r| async move {
             match r.recv().await {
                 Ok(p) => Some((p, r)),
                 Err(e) => {
