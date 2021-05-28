@@ -39,7 +39,6 @@ impl fmt::Display for Entry {
 #[derive(Debug, Clone)]
 pub enum Msg {
     Select(Entry),
-    Ignore(Entry),
 }
 
 impl Node {
@@ -72,9 +71,7 @@ impl Node {
                     .width(Length::FillPortion(1))
                     .into()
             } else {
-                PickList::new(&mut self.state, &self.entries, Some(current), Msg::Ignore)
-                    .width(Length::FillPortion(1))
-                    .into()
+                Text::new(current.name).width(Length::FillPortion(1)).into()
             }
         } else {
             util::not_available().width(Length::FillPortion(1)).into()
@@ -87,12 +84,11 @@ impl Node {
         msg: Msg,
         cx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Result<()> {
-        if let Msg::Select(entry) = msg {
-            if !self.inner.is_writable(cx)? {
-                return Ok(());
-            }
-            self.inner.set_entry_by_value(cx, entry.value)?;
+        let Msg::Select(entry) = msg;
+        if !self.inner.is_writable(cx)? {
+            return Ok(());
         }
+        self.inner.set_entry_by_value(cx, entry.value)?;
         Ok(())
     }
 }
