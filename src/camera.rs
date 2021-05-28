@@ -1,5 +1,3 @@
-use anyhow::Result;
-
 use cameleon::{
     genapi::DefaultGenApiCtxt, payload::PayloadSender, u3v, CameleonResult, ControlResult,
     DeviceControl, PayloadStream, StreamResult,

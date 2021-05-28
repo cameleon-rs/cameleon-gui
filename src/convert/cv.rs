@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use cameleon::payload::ImageInfo;
 use cameleon_device::PixelFormat;
 use image::DynamicImage;
@@ -6,7 +5,7 @@ use opencv::core as cv_core;
 use opencv::imgproc;
 use opencv::prelude::*;
 
-use crate::{Error, Result};
+use super::{Error, Result};
 
 fn code(pf: PixelFormat) -> Option<i32> {
     match pf {
@@ -27,10 +26,6 @@ fn code(pf: PixelFormat) -> Option<i32> {
     }
 }
 
-fn into_failed(err: impl std::error::Error + Send + Sync + 'static) -> Error {
-    Error::ConversionError(err.into())
-}
-
 pub fn convert_impl(buf: &[u8], info: &ImageInfo) -> Result<DynamicImage> {
     let mut buf = buf.to_vec();
     let width = info.width as i32;
@@ -46,25 +41,19 @@ pub fn convert_impl(buf: &[u8], info: &ImageInfo) -> Result<DynamicImage> {
             data,
             cv_core::Mat_AUTO_STEP,
         )
-    }
-    .map_err(into_failed)?;
+    }?;
     let mut dst = Mat::default();
     if let Some(code) = code(pf) {
-        imgproc::cvt_color(&src, &mut dst, code, 0).map_err(into_failed)?;
-        let len = (dst.cols() * dst.rows() * dst.channels().map_err(into_failed)?) as usize;
-        let dst_slice = unsafe {
-            std::slice::from_raw_parts(dst.data().map_err(into_failed)? as *const u8, len)
-        };
+        imgproc::cvt_color(&src, &mut dst, code, 0)?;
+        let len = (dst.cols() * dst.rows() * dst.channels()?) as usize;
+        let dst_slice = unsafe { std::slice::from_raw_parts(dst.data()? as *const u8, len) };
         let mut dst_vec = Vec::new();
         dst_vec.extend_from_slice(dst_slice);
         Ok(DynamicImage::ImageBgra8(
             image::ImageBuffer::from_raw(width as u32, height as u32, dst_vec)
-                .ok_or_else(|| Error::ConversionError(anyhow!("wrong image data")))?,
+                .ok_or_else(|| Error::InvalidData("wrong image data".into()))?,
         ))
     } else {
-        Err(Error::ConversionError(anyhow!(
-            "unsupported pixel format: {:?}",
-            pf
-        )))
+        Err(Error::UnsupportedPixelFormat(pf))
     }
 }

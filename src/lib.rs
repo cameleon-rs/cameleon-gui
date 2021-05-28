@@ -41,7 +41,7 @@ pub enum Error {
     GenApiError(#[from] cameleon_genapi::GenApiError),
 
     #[error("failed conversion: {0}")]
-    ConversionError(anyhow::Error),
+    ConversionError(#[from] convert::Error),
 
     #[error("not found: {0:?}")]
     NotFound(CameraId),
