@@ -1,36 +1,23 @@
-use std::{collections::BTreeMap, time::Duration};
+use std::collections::{BTreeMap, HashSet};
 
-use iced::{
-    button, scrollable, time, Button, Checkbox, Column, Container, Element, Length, Row,
-    Scrollable, Space, Subscription, Text,
-};
+use iced::{button, scrollable, Button, Container, Element, Length, Scrollable, Text};
 
-use super::style::WithBorder;
 use super::{
     context::{CameraId, Context},
+    style::WithBorder,
     Result,
 };
 
 #[derive(Debug, Clone)]
 pub enum Msg {
     Select(CameraId),
-    EnableAutoRefresh(bool),
-    Refresh,
-    Add(CameraId),
-    Remove(CameraId),
-}
-
-pub enum OutMsg {
-    UpdateContext,
-    None,
+    SyncIds,
 }
 
 #[derive(Debug, Default)]
 pub struct Selector {
     options: BTreeMap<CameraId, (String, button::State)>,
     scrollable: scrollable::State,
-    refresh: button::State,
-    auto_refresh: bool,
 }
 
 impl Selector {
@@ -46,49 +33,24 @@ impl Selector {
                 )
             },
         );
-        let auto_refresh = Checkbox::new(self.auto_refresh, "Auto Refresh", Msg::EnableAutoRefresh);
-        let refresh = Button::new(&mut self.refresh, Text::new("Refresh")).on_press(Msg::Refresh);
-        let buttons = Container::new(
-            Row::new()
-                .push(auto_refresh)
-                .push(Space::new(Length::Fill, Length::Shrink))
-                .push(refresh),
-        )
-        .style(WithBorder);
-
-        let content = Column::new().push(options).push(buttons);
-        Container::new(content).style(WithBorder).into()
+        Container::new(options).style(WithBorder).into()
     }
 
-    pub fn update(&mut self, msg: Msg, ctx: &mut Context) -> Result<OutMsg> {
+    pub fn update(&mut self, msg: Msg, ctx: &mut Context) -> Result<()> {
         match msg {
-            Msg::Select(id) => {
-                ctx.select(id)?;
-                Ok(OutMsg::None)
+            Msg::Select(id) => ctx.select(id),
+            Msg::SyncIds => {
+                let old_ids: HashSet<CameraId> = self.options.keys().copied().collect();
+                let new_ids: HashSet<CameraId> = ctx.ids().copied().collect();
+                for dissappered in old_ids.difference(&new_ids) {
+                    self.options.remove(dissappered);
+                }
+                for newly_added in new_ids.difference(&old_ids) {
+                    self.options
+                        .insert(*newly_added, (newly_added.name(ctx), button::State::new()));
+                }
+                Ok(())
             }
-            Msg::Refresh => Ok(OutMsg::UpdateContext),
-            Msg::EnableAutoRefresh(auto_refresh) => {
-                self.auto_refresh = auto_refresh;
-                Ok(OutMsg::None)
-            }
-            Msg::Add(id) => {
-                self.options
-                    .entry(id)
-                    .or_insert_with_key(|id| (id.name(ctx), button::State::new()));
-                Ok(OutMsg::None)
-            }
-            Msg::Remove(id) => {
-                self.options.remove(&id);
-                Ok(OutMsg::None)
-            }
-        }
-    }
-
-    pub fn subscription(&self) -> Subscription<Msg> {
-        if self.auto_refresh {
-            time::every(Duration::from_secs(1)).map(|_| Msg::Refresh)
-        } else {
-            Subscription::none()
         }
     }
 }

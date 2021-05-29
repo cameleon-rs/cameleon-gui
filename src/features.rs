@@ -6,7 +6,7 @@ use super::{
 };
 use iced::{Element, Length, Space};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     ops::{Index, IndexMut},
 };
 
@@ -14,8 +14,7 @@ use std::{
 pub enum Msg {
     GenApi(CameraId, genapi::Msg),
     Load(CameraId),
-    Add(CameraId),
-    Remove(CameraId),
+    SyncIds,
 }
 
 #[derive(Default)]
@@ -52,14 +51,18 @@ impl Features {
             Msg::GenApi(id, msg) => {
                 self[id].update(msg, &mut id.params_ctx(ctx)?)?;
             }
-            Msg::Add(id) => {
-                self.genapis.entry(id).or_insert_with(GenApi::new);
-            }
-            Msg::Remove(id) => {
-                self.genapis.remove(&id);
-            }
             Msg::Load(id) => {
                 self[id].load(&mut id.params_ctx(ctx)?)?;
+            }
+            Msg::SyncIds => {
+                let old_ids: HashSet<CameraId> = self.genapis.keys().copied().collect();
+                let new_ids: HashSet<CameraId> = ctx.ids().copied().collect();
+                for dissappered in old_ids.difference(&new_ids) {
+                    self.genapis.remove(dissappered);
+                }
+                for newly_added in new_ids.difference(&old_ids) {
+                    self.genapis.insert(*newly_added, GenApi::new());
+                }
             }
         }
         Ok(())

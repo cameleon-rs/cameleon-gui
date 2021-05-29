@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     hash::{Hash, Hasher},
     iter::Iterator,
     ops::{Index, IndexMut},
@@ -13,7 +13,7 @@ use cameleon::{
 };
 
 use super::{
-    camera::{enumerate_cameras, Camera, ControlHandle},
+    camera::{Camera, ControlHandle},
     Error, Result,
 };
 
@@ -21,15 +21,6 @@ use super::{
 pub struct Context {
     cameras: HashMap<CameraId, Camera>,
     selected: Option<CameraId>,
-}
-
-pub enum Msg {
-    Update,
-}
-
-pub enum OutMsg {
-    Add(CameraId),
-    Remove(CameraId),
 }
 
 impl Context {
@@ -54,34 +45,21 @@ impl Context {
         self.selected
     }
 
-    pub fn cameras(&self) -> impl Iterator<Item = &CameraId> {
+    pub fn ids(&self) -> impl Iterator<Item = &CameraId> {
         self.cameras.keys()
     }
 
-    pub fn update(&mut self, _msg: Msg) -> Result<Vec<OutMsg>> {
-        let old_ids: HashSet<CameraId> = self.cameras().copied().collect();
-        let cameras = enumerate_cameras()?;
-        let added: HashSet<CameraId> = cameras.into_iter().map(|cam| self.add(cam)).collect();
-        let removed = old_ids
-            .difference(&added)
-            .map(|id| self.remove(*id))
-            .map(OutMsg::Remove);
-        let newly_added = added.difference(&old_ids).copied().map(OutMsg::Add);
-        Ok(removed.chain(newly_added).collect())
-    }
-
-    fn add(&mut self, camera: Camera) -> CameraId {
+    pub fn add(&mut self, camera: Camera) -> CameraId {
         let id = id(camera.info());
         self.cameras.entry(id).or_insert(camera);
         id
     }
 
-    fn remove(&mut self, id: CameraId) -> CameraId {
+    pub fn remove(&mut self, id: CameraId) {
         self.cameras.remove(&id);
         if self.selected == Some(id) {
             self.selected = None
         }
-        id
     }
 }
 

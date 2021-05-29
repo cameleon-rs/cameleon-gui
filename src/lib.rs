@@ -4,7 +4,6 @@ use iced::{
     executor, Application, Clipboard, Color, Column, Command, Container, Element, Row, Subscription,
 };
 use std::borrow::Cow;
-use tracing::trace;
 
 mod camera;
 mod context;
@@ -13,14 +12,16 @@ mod convert;
 mod features;
 mod frame;
 mod genapi;
+mod scanner;
 mod selector;
 mod style;
 
 #[derive(Default)]
 pub struct App {
     ctx: context::Context,
-    selector: selector::Selector,
     control: control::Control,
+    selector: selector::Selector,
+    scanner: scanner::Scanner,
     features: features::Features,
     frame: frame::Frame,
     debug: bool,
@@ -56,6 +57,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Msg {
     Control(control::Msg),
     Selector(selector::Msg),
+    Scanner(scanner::Msg),
     Features(features::Msg),
     Frame(frame::Msg),
 }
@@ -75,7 +77,7 @@ impl Application for App {
             debug: flags.debug,
             ..Default::default()
         };
-        app.update_selector(selector::Msg::Refresh);
+        app.update_scanner(scanner::Msg::Scan);
         (app, Command::none())
     }
 
@@ -86,6 +88,7 @@ impl Application for App {
     fn view(&mut self) -> Element<'_, Self::Message> {
         let control = self.control.view(&self.ctx).map(Into::into);
         let selector = self.selector.view(&self.ctx).map(Into::into);
+        let scanner = self.scanner.view(&mut self.ctx).map(Into::into);
         let features = self.features.view(&mut self.ctx).map(Into::into);
         let frame = self.frame.view(&self.ctx).map(Into::into);
 
@@ -93,7 +96,13 @@ impl Application for App {
             .push(control)
             .push(
                 Row::new()
-                    .push(Column::new().max_width(400).push(selector).push(features))
+                    .push(
+                        Column::new()
+                            .max_width(400)
+                            .push(selector)
+                            .push(scanner)
+                            .push(features),
+                    )
                     .push(frame),
             )
             .into();
@@ -112,6 +121,7 @@ impl Application for App {
         match message {
             Msg::Control(msg) => self.update_control(msg),
             Msg::Selector(msg) => self.update_selector(msg),
+            Msg::Scanner(msg) => self.update_scanner(msg),
             Msg::Frame(msg) => self.update_frame(msg),
             Msg::Features(msg) => self.update_features(msg),
         }
@@ -120,36 +130,12 @@ impl Application for App {
     fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![
             self.frame.subscription().map(Into::into),
-            self.selector.subscription().map(Into::into),
+            self.scanner.subscription().map(Into::into),
         ])
     }
 }
 
 impl App {
-    fn update_context(&mut self, msg: context::Msg) -> Command<Msg> {
-        match self.ctx.update(msg) {
-            Ok(msgs) => {
-                for msg in msgs {
-                    match msg {
-                        context::OutMsg::Add(id) => {
-                            self.update_selector(selector::Msg::Add(id));
-                            self.update_features(features::Msg::Add(id));
-                        }
-                        context::OutMsg::Remove(id) => {
-                            self.update_selector(selector::Msg::Remove(id));
-                            self.update_features(features::Msg::Remove(id));
-                        }
-                    }
-                }
-                Command::none()
-            }
-            Err(err) => {
-                tracing::trace!("{}", err);
-                Command::none()
-            }
-        }
-    }
-
     fn update_control(&mut self, msg: control::Msg) -> Command<Msg> {
         match self.control.update(msg, &mut self.ctx) {
             Ok(out) => match out {
@@ -158,7 +144,7 @@ impl App {
                     self.update_frame(frame::Msg::Attach(receiver))
                 }
                 control::OutMsg::StopStreaming(_) => self.update_frame(frame::Msg::Detach),
-                _ => Command::none(),
+                control::OutMsg::Close(_) | control::OutMsg::None => Command::none(),
             },
             Err(err) => {
                 tracing::error!("{}", err);
@@ -168,10 +154,20 @@ impl App {
     }
 
     fn update_selector(&mut self, msg: selector::Msg) -> Command<Msg> {
-        match self.selector.update(msg, &mut self.ctx) {
+        if let Err(err) = self.selector.update(msg, &mut self.ctx) {
+            tracing::error!("{}", err)
+        };
+        Command::none()
+    }
+
+    fn update_scanner(&mut self, msg: scanner::Msg) -> Command<Msg> {
+        match self.scanner.update(msg, &mut self.ctx) {
             Ok(msg) => match msg {
-                selector::OutMsg::UpdateContext => self.update_context(context::Msg::Update),
-                _ => Command::none(),
+                scanner::OutMsg::SyncIds => Command::batch(vec![
+                    self.update_selector(selector::Msg::SyncIds),
+                    self.update_features(features::Msg::SyncIds),
+                ]),
+                scanner::OutMsg::None => Command::none(),
             },
             Err(err) => {
                 tracing::error!("{}", err);
@@ -191,12 +187,8 @@ impl App {
     }
 
     fn update_features(&mut self, msg: features::Msg) -> Command<Msg> {
-        trace!("Update features");
-        match self.features.update(msg, &mut self.ctx) {
-            Ok(()) => (),
-            Err(err) => {
-                tracing::error!("{}", err);
-            }
+        if let Err(err) = self.features.update(msg, &mut self.ctx) {
+            tracing::error!("{}", err);
         }
         Command::none()
     }
