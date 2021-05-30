@@ -163,7 +163,7 @@ impl App {
     fn update_scanner(&mut self, msg: scanner::Msg) -> Command<Msg> {
         match self.scanner.update(msg, &mut self.ctx) {
             Ok(msg) => match msg {
-                scanner::OutMsg::SyncIds => Command::batch(vec![
+                scanner::OutMsg::CameraListRefreshed => Command::batch(vec![
                     self.update_selector(selector::Msg::SyncIds),
                     self.update_features(features::Msg::SyncIds),
                 ]),

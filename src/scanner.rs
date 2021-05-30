@@ -18,7 +18,7 @@ pub enum Msg {
 
 #[derive(Debug)]
 pub enum OutMsg {
-    SyncIds,
+    CameraListRefreshed,
     None,
 }
 
@@ -43,7 +43,7 @@ impl Scanner {
         match msg {
             Msg::Scan => {
                 self.scan(ctx)?;
-                Ok(OutMsg::SyncIds)
+                Ok(OutMsg::CameraListRefreshed)
             }
             Msg::EnableAutoScan(v) => {
                 self.auto_scan = v;
