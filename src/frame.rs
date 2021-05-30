@@ -1,12 +1,12 @@
 use cameleon::payload::{Payload, PayloadReceiver};
 use iced::{
     image::{viewer, Handle, Image, Viewer},
-    Command, Container, Element, Subscription,
+    Align, Command, Container, Element, Length, Subscription,
 };
 use iced_futures::BoxStream;
 use std::hash::{Hash, Hasher};
 
-use super::{context::Context, convert::convert, Result};
+use super::{context::Context, convert::convert, style::WithBorder, Result};
 
 #[derive(Debug)]
 pub enum Msg {
@@ -51,9 +51,18 @@ impl Frame {
         let content: Element<_> = if let Some(ref handle) = self.handle {
             Viewer::new(&mut self.viewer, handle.clone()).into()
         } else {
-            Image::new("ferris.png").into()
+            Image::new("cameleon_512x512.png")
+                .width(Length::Units(256))
+                .height(Length::Units(256))
+                .into()
         };
-        Container::new(content).into()
+        Container::new(content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .align_x(Align::Center)
+            .align_y(Align::Center)
+            .style(WithBorder)
+            .into()
     }
 
     pub fn update(&mut self, msg: Msg, _ctx: &mut Context) -> Result<Command<Msg>> {
