@@ -7,8 +7,7 @@ mod image;
 #[cfg(not(feature = "cv"))]
 use self::image::convert_impl;
 
-use cameleon::payload::{Payload, PayloadType};
-use cameleon_device::PixelFormat;
+use cameleon::payload::{Payload, PayloadType, PixelFormat};
 use iced::image::Handle;
 use std::borrow::Cow;
 

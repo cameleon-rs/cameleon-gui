@@ -39,7 +39,7 @@ pub enum Error {
     ControlError(#[from] cameleon::ControlError),
 
     #[error("genapi error: {0}")]
-    GenApiError(#[from] cameleon_genapi::GenApiError),
+    GenApiError(#[from] cameleon::genapi::GenApiError),
 
     #[error("failed conversion: {0}")]
     ConversionError(#[from] convert::Error),

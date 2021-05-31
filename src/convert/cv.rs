@@ -1,5 +1,4 @@
-use cameleon::payload::ImageInfo;
-use cameleon_device::PixelFormat;
+use cameleon::payload::{ImageInfo, PixelFormat};
 use image::DynamicImage;
 use opencv::core as cv_core;
 use opencv::imgproc;

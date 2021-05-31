@@ -1,6 +1,5 @@
 use super::{Error, Result};
-use cameleon::payload::ImageInfo;
-use cameleon_device::PixelFormat;
+use cameleon::payload::{ImageInfo, PixelFormat};
 use image::{Bgr, DynamicImage, GrayImage, ImageBuffer, RgbImage};
 
 #[cfg(not(feature = "cv"))]
