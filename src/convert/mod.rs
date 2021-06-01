@@ -1,11 +1,17 @@
 #[cfg(feature = "cv")]
 mod cv;
-#[cfg(feature = "cv")]
-use cv::convert_impl;
 #[cfg(not(feature = "cv"))]
 mod image;
+
+#[cfg(feature = "cv")]
+mod image_process {
+    pub use super::cv::convert;
+}
+
 #[cfg(not(feature = "cv"))]
-use self::image::convert_impl;
+mod image_process {
+    pub use super::image::convert;
+}
 
 use cameleon::payload::{Payload, PayloadType, PixelFormat};
 use iced::image::Handle;
@@ -45,7 +51,7 @@ pub fn convert(payload: &Payload) -> Result<Handle> {
     let buf = payload
         .image()
         .ok_or_else(|| Error::InvalidData("not image".into()))?;
-    let image = convert_impl(buf, info)?;
+    let image = image_process::convert(buf, info)?;
     let bgra = image.into_bgra8();
     Ok(Handle::from_pixels(
         info.width as u32,

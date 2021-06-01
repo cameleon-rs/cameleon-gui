@@ -2,8 +2,7 @@ use super::{Error, Result};
 use cameleon::payload::{ImageInfo, PixelFormat};
 use image::{Bgr, DynamicImage, GrayImage, ImageBuffer, RgbImage};
 
-#[cfg(not(feature = "cv"))]
-pub fn convert_impl(buf: &[u8], info: &ImageInfo) -> Result<DynamicImage> {
+pub fn convert(buf: &[u8], info: &ImageInfo) -> Result<DynamicImage> {
     let buf = buf.to_vec();
     let width = info.width as u32;
     let height = info.height as u32;
