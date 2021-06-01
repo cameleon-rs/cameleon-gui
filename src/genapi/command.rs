@@ -5,6 +5,7 @@ use cameleon::{
     DeviceControl,
 };
 use iced::{button, Button, Element, Length, Row, Text};
+use std::time;
 
 #[derive(Debug, Clone)]
 pub enum Msg {
@@ -55,7 +56,17 @@ impl Node {
                 if !self.inner.is_writable(ctx)? {
                     Ok(())
                 } else {
-                    Ok(self.inner.execute(ctx)?)
+                    self.inner.execute(ctx)?;
+                    let now = time::Instant::now();
+                    loop {
+                        if now.elapsed() > time::Duration::from_secs(1) {
+                            break;
+                        }
+                        if self.inner.is_done(ctx)? {
+                            break;
+                        }
+                    }
+                    Ok(())
                 }
             }
         }
