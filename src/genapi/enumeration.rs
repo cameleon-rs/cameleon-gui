@@ -1,7 +1,7 @@
 use super::util;
 use crate::Result;
 use cameleon::{
-    genapi::{node_kind::EnumerationNode, GenApiCtxt, ParamsCtxt},
+    genapi::{EnumerationNode, GenApiCtxt, ParamsCtxt},
     DeviceControl,
 };
 use iced::{pick_list, Element, Length, PickList, Row, Text};

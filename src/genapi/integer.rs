@@ -1,7 +1,7 @@
 use super::util;
 use crate::Result;
 use cameleon::{
-    genapi::{node_kind::IntegerNode, GenApiCtxt, ParamsCtxt},
+    genapi::{GenApiCtxt, IntegerNode, ParamsCtxt},
     DeviceControl,
 };
 use iced::{text_input, Element, Length, Row, Text, TextInput};

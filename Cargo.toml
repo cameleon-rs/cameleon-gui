@@ -15,8 +15,7 @@ iced = { version = "0.3.0", features = ["image", "smol", "svg"] }
 tracing = "0.1.26"
 tracing-subscriber = "0.2.18"
 opencv = { version = "0.53.0", optional = true }
-cameleon = {git="ssh://git@github.com:22/cameleon-rs/cameleon.git", branch="main", features=["libusb"]}
-cameleon-genapi = {git="ssh://git@github.com:22/cameleon-rs/cameleon.git", branch="main"}
+cameleon = {git="ssh://git@github.com:22/cameleon-rs/cameleon.git", branch="main"}
 image = "0.23.14"
 thiserror = "1.0.25"
 derive_more = "0.99.14"
@@ -26,4 +25,4 @@ futures = "0.3.15"
 
 [features]
 cv = ["opencv", "libc"]
-default = []
+default = ["cameleon/libusb"]

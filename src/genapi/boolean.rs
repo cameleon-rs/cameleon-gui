@@ -1,6 +1,6 @@
 use crate::Result;
 use cameleon::{
-    genapi::{node_kind::BooleanNode, GenApiCtxt, ParamsCtxt},
+    genapi::{BooleanNode, GenApiCtxt, ParamsCtxt},
     DeviceControl,
 };
 use iced::{Checkbox, Element, Length, Row, Text};

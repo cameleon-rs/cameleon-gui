@@ -32,7 +32,7 @@ pub enum Node {
 
 impl Node {
     pub fn new<T: DeviceControl, U: GenApiCtxt>(
-        node: cameleon::genapi::node_kind::Node,
+        node: cameleon::genapi::Node,
         ctx: &mut ParamsCtxt<T, U>,
     ) -> Option<Self> {
         if let Some(node) = node.as_boolean(ctx) {

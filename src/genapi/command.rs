@@ -1,7 +1,7 @@
 use super::util;
 use crate::Result;
 use cameleon::{
-    genapi::{node_kind::CommandNode, GenApiCtxt, ParamsCtxt},
+    genapi::{CommandNode, GenApiCtxt, ParamsCtxt},
     DeviceControl,
 };
 use iced::{button, Button, Element, Length, Row, Text};

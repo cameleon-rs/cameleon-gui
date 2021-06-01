@@ -143,8 +143,10 @@ impl App {
                 control::OutMsg::StreamingStarted(_id, receiver) => {
                     self.update_frame(frame::Msg::Attach(receiver))
                 }
-                control::OutMsg::StreamingStopped(_) => self.update_frame(frame::Msg::Detach),
-                control::OutMsg::Closed(_) | control::OutMsg::None => Command::none(),
+                control::OutMsg::StreamingStopped(_) | control::OutMsg::Closed(_) => {
+                    self.update_frame(frame::Msg::Detach)
+                }
+                control::OutMsg::None => Command::none(),
             },
             Err(err) => {
                 tracing::error!("{}", err);

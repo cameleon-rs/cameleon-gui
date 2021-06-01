@@ -1,7 +1,7 @@
 use super::node;
 use crate::Result;
 use cameleon::{
-    genapi::{node_kind::CategoryNode, GenApiCtxt, ParamsCtxt},
+    genapi::{CategoryNode, GenApiCtxt, ParamsCtxt},
     DeviceControl,
 };
 use iced::{button, Button, Column, Element, Length, Row, Space, Text};

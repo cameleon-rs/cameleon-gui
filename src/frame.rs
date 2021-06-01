@@ -80,6 +80,7 @@ impl Frame {
             }
             Msg::Detach => {
                 self.receiver = None;
+                self.handle = None;
                 Ok(Command::none())
             }
         }

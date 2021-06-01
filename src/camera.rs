@@ -55,13 +55,6 @@ impl ControlHandle {
     }
 }
 
-impl cameleon_genapi::Device for ControlHandle {
-    delegate_mut! {
-        fn read_mem(&mut self, address: i64, buf: &mut [u8]) -> Result<(), Box<dyn std::error::Error>>;
-        fn write_mem(&mut self, address: i64, data: &[u8]) -> Result<(), Box<dyn std::error::Error>>;
-    }
-}
-
 impl DeviceControl for ControlHandle {
     delegate_mut! {
         fn open(&mut self) -> ControlResult<()>;

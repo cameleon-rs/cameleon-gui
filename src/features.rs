@@ -31,6 +31,9 @@ macro_rules! space {
 impl Features {
     pub fn view(&mut self, ctx: &mut Context) -> Element<Msg> {
         if let Some(selected) = ctx.selected() {
+            if !selected.is_opened(ctx) {
+                return space!();
+            }
             let genapi = &mut self[selected];
             match selected.params_ctx(ctx) {
                 Ok(mut params_ctx) => genapi
