@@ -23,7 +23,7 @@ pub struct Selector {
 impl Selector {
     pub fn view(&mut self, ctx: &Context) -> Element<Msg> {
         let options = self.options.iter_mut().fold(
-            Scrollable::new(&mut self.scrollable).height(Length::Units(300)),
+            Scrollable::new(&mut self.scrollable).height(Length::Units(200)),
             |scrollable, (id, (name, state))| {
                 scrollable.push(
                     Button::new(state, Text::new(name.clone()))
