@@ -11,7 +11,7 @@ use super::{
 #[derive(Debug, Clone)]
 pub enum Msg {
     Select(CameraId),
-    SyncIds,
+    Detected(Vec<CameraId>),
 }
 
 #[derive(Debug, Default)]
@@ -39,9 +39,9 @@ impl Selector {
     pub fn update(&mut self, msg: Msg, ctx: &mut Context) -> Result<()> {
         match msg {
             Msg::Select(id) => ctx.select(id),
-            Msg::SyncIds => {
+            Msg::Detected(new_ids) => {
                 let old_ids: HashSet<CameraId> = self.options.keys().copied().collect();
-                let new_ids: HashSet<CameraId> = ctx.ids().copied().collect();
+                let new_ids: HashSet<CameraId> = new_ids.into_iter().collect();
                 for dissappered in old_ids.difference(&new_ids) {
                     self.options.remove(dissappered);
                 }

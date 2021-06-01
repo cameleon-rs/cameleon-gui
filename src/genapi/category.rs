@@ -17,11 +17,9 @@ pub struct Node {
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    Expand,
+    Clicked,
     Node(usize, Box<node::Msg>),
 }
-
-const SPACE_OFFSET: u16 = 0;
 
 impl Node {
     pub fn new(
@@ -53,7 +51,7 @@ impl Node {
         let mut column = Column::new().push(
             Button::new(&mut self.expand, Text::new(&self.name))
                 .width(Length::Fill)
-                .on_press(Msg::Expand)
+                .on_press(Msg::Clicked)
                 .style(style::Category),
         );
         if self.expanded {
@@ -76,10 +74,7 @@ impl Node {
                     .push(features),
             );
         }
-        Row::new()
-            .push(Space::new(Length::Units(SPACE_OFFSET), Length::Shrink))
-            .push(column)
-            .into()
+        Row::new().push(column).into()
     }
 
     #[tracing::instrument(skip(self, ctx), level = "trace")]
@@ -89,7 +84,7 @@ impl Node {
         ctx: &mut ParamsCtxt<impl DeviceControl, impl GenApiCtxt>,
     ) -> Result<()> {
         match msg {
-            Msg::Expand => {
+            Msg::Clicked => {
                 self.expanded = !self.expanded;
                 trace!(self.expanded);
                 trace!("num of features: {}", self.features.len());

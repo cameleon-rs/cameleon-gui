@@ -4,7 +4,6 @@ use cameleon::{
     genapi::{node_kind::EnumerationNode, GenApiCtxt, ParamsCtxt},
     DeviceControl,
 };
-use cameleon_genapi::EnumEntryNode;
 use iced::{pick_list, Element, Length, PickList, Row, Text};
 use std::fmt;
 
@@ -21,13 +20,13 @@ pub struct Entry {
     value: i64,
 }
 
-impl Entry {
-    fn new(raw: &EnumEntryNode) -> Self {
-        Self {
-            name: raw.name().to_string(),
-            value: raw.value(),
+macro_rules! new_entry {
+    ($raw: expr) => {
+        Entry {
+            name: $raw.name().to_string(),
+            value: $raw.value(),
         }
-    }
+    };
 }
 
 impl fmt::Display for Entry {
@@ -53,7 +52,7 @@ impl Node {
             entries: inner
                 .entries(ctx)
                 .iter()
-                .map(|raw| Entry::new(raw))
+                .map(|raw| new_entry!(raw))
                 .collect(),
         }
     }
@@ -65,7 +64,7 @@ impl Node {
         let name = Text::new(&self.name).width(Length::FillPortion(1));
         let value: Element<_> = if self.inner.is_readable(ctx)? {
             let current = self.inner.current_entry(ctx)?;
-            let current = Entry::new(current);
+            let current = new_entry!(current);
             if self.inner.is_writable(ctx)? {
                 PickList::new(&mut self.state, &self.entries, Some(current), Msg::Select)
                     .width(Length::FillPortion(1))

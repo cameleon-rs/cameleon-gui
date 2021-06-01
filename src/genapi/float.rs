@@ -35,9 +35,9 @@ impl Node {
     ) -> Result<Element<Msg>> {
         let name = Text::new(&self.name).width(Length::FillPortion(1));
         let value: Element<_> = if let Ok(value) = self.inner.value(ctx) {
-            let value = &value.to_string();
+            let value = value.to_string();
             if self.inner.is_writable(ctx)? {
-                TextInput::new(&mut self.state, "", value, Msg::Change)
+                TextInput::new(&mut self.state, "", &value, Msg::Change)
                     .width(Length::FillPortion(1))
                     .into()
             } else {

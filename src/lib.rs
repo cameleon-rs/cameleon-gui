@@ -139,12 +139,12 @@ impl App {
     fn update_control(&mut self, msg: control::Msg) -> Command<Msg> {
         match self.control.update(msg, &mut self.ctx) {
             Ok(out) => match out {
-                control::OutMsg::Open(id) => self.update_features(features::Msg::Load(id)),
-                control::OutMsg::StartStreaming(_id, receiver) => {
+                control::OutMsg::Opened(id) => self.update_features(features::Msg::Load(id)),
+                control::OutMsg::StreamingStarted(_id, receiver) => {
                     self.update_frame(frame::Msg::Attach(receiver))
                 }
-                control::OutMsg::StopStreaming(_) => self.update_frame(frame::Msg::Detach),
-                control::OutMsg::Close(_) | control::OutMsg::None => Command::none(),
+                control::OutMsg::StreamingStopped(_) => self.update_frame(frame::Msg::Detach),
+                control::OutMsg::Closed(_) | control::OutMsg::None => Command::none(),
             },
             Err(err) => {
                 tracing::error!("{}", err);
@@ -163,9 +163,9 @@ impl App {
     fn update_scanner(&mut self, msg: scanner::Msg) -> Command<Msg> {
         match self.scanner.update(msg, &mut self.ctx) {
             Ok(msg) => match msg {
-                scanner::OutMsg::CameraListRefreshed => Command::batch(vec![
-                    self.update_selector(selector::Msg::SyncIds),
-                    self.update_features(features::Msg::SyncIds),
+                scanner::OutMsg::Detected(ids) => Command::batch(vec![
+                    self.update_selector(selector::Msg::Detected(ids.clone())),
+                    self.update_features(features::Msg::Detected(ids)),
                 ]),
                 scanner::OutMsg::None => Command::none(),
             },

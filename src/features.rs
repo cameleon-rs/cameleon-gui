@@ -14,7 +14,7 @@ use std::{
 pub enum Msg {
     GenApi(CameraId, genapi::Msg),
     Load(CameraId),
-    SyncIds,
+    Detected(Vec<CameraId>),
 }
 
 #[derive(Default)]
@@ -54,9 +54,9 @@ impl Features {
             Msg::Load(id) => {
                 self[id].load(&mut id.params_ctx(ctx)?)?;
             }
-            Msg::SyncIds => {
+            Msg::Detected(new_ids) => {
                 let old_ids: HashSet<CameraId> = self.genapis.keys().copied().collect();
-                let new_ids: HashSet<CameraId> = ctx.ids().copied().collect();
+                let new_ids: HashSet<CameraId> = new_ids.into_iter().collect();
                 for dissappered in old_ids.difference(&new_ids) {
                     self.genapis.remove(dissappered);
                 }

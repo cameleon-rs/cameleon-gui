@@ -15,7 +15,7 @@ use super::util;
 #[derive(Debug, Clone)]
 pub enum Msg {
     Select(bool),
-    Ignore(bool),
+    Ignore,
 }
 
 impl Node {
@@ -39,7 +39,7 @@ impl Node {
             let msg = if self.inner.is_writable(ctx)? {
                 Msg::Select
             } else {
-                Msg::Ignore
+                |_| Msg::Ignore
             };
             Checkbox::new(value, "", msg)
                 .width(Length::FillPortion(1))
