@@ -6,7 +6,6 @@ use std::{
 };
 
 use cameleon::{
-    camera::CameraInfo,
     genapi::{DefaultGenApiCtxt, ParamsCtxt},
     payload::PayloadReceiver,
     DeviceControl, PayloadStream,
@@ -50,7 +49,10 @@ impl Context {
     }
 
     pub fn add(&mut self, camera: Camera) -> CameraId {
-        let id = id(camera.info());
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        camera.info().hash(&mut hasher);
+        let hash = hasher.finish();
+        let id = CameraId(hash);
         self.cameras.entry(id).or_insert(camera);
         id
     }
@@ -61,13 +63,6 @@ impl Context {
             self.selected = None
         }
     }
-}
-
-fn id(info: &CameraInfo) -> CameraId {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    info.hash(&mut hasher);
-    let hash = hasher.finish();
-    CameraId(hash)
 }
 
 impl Index<CameraId> for Context {
