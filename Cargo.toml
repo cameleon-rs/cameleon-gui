@@ -11,7 +11,7 @@ name = "cameleon"
 path = "src/main.rs"
 
 [dependencies]
-iced = { version = "0.3.0", features = ["image", "smol"] }
+iced = { version = "0.3.0", features = ["image", "smol", "svg"] }
 tracing = "0.1.26"
 tracing-subscriber = "0.2.18"
 opencv = { version = "0.53.0", optional = true }

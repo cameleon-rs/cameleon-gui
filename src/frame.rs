@@ -1,7 +1,7 @@
 use cameleon::payload::{Payload, PayloadReceiver};
 use iced::{
-    image::{viewer, Handle, Image, Viewer},
-    Align, Command, Container, Element, Length, Subscription,
+    image::{viewer, Handle, Viewer},
+    Align, Command, Container, Element, Length, Subscription, Svg,
 };
 use iced_futures::BoxStream;
 use std::hash::{Hash, Hasher};
@@ -51,7 +51,7 @@ impl Frame {
         let content: Element<_> = if let Some(ref handle) = self.handle {
             Viewer::new(&mut self.viewer, handle.clone()).into()
         } else {
-            Image::new("cameleon_512x512.png")
+            Svg::from_path(format!("{}/logo.svg", env!("CARGO_MANIFEST_DIR")))
                 .width(Length::Units(256))
                 .height(Length::Units(256))
                 .into()
