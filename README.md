@@ -2,8 +2,6 @@
 
 A standalone GUI application that allows you to take pictures and control GenAPI with [GenICam](https://www.emva.org/standards-technology/genicam/) compatible cameras.
 
-![snapshot](snap.png)
-
 ## Prerequisites
 
 * [libusb](https://libusb.info/)
